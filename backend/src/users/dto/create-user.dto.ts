@@ -53,4 +53,12 @@ export class CreateUserDto {
   @IsBoolean()
   @IsOptional()
   oneToOneActive?: boolean; // Se true, operador pode chamar clientes no 1x1 (padrão: true)
+
+  @Transform(({ value }) => {
+    if (value === null || value === undefined || value === '') return undefined;
+    return Boolean(value);
+  })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean; // Se false, operador está desativado (padrão: true)
 }

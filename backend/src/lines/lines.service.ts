@@ -508,15 +508,20 @@ export class LinesService {
     }
 
     // Calcular prioridade de cada operador
+    // Limite máximo de conversas simultâneas por operador
+    const MAX_CONVERSATIONS_PER_OPERATOR = 15;
+
     const operatorPriorities = await Promise.all(
       segmentOperators.map(async (operator) => {
-        // Contar atendimentos em andamento (conversas não tabuladas)
-        const activeConversations = await (this.prisma as any).conversation.count({
+        // Contar atendimentos em andamento (conversas não tabuladas, por contato distinto)
+        const activeConversationsRaw = await (this.prisma as any).conversation.groupBy({
+          by: ['contactPhone'],
           where: {
             userId: operator.id,
             tabulation: null,
           },
         });
+        const activeConversations = activeConversationsRaw.length;
 
         // Obter tempo logado do WebSocketGateway
         const connectionTime = this.websocketGateway.getOperatorConnectionTime(operator.id);
@@ -527,12 +532,12 @@ export class LinesService {
           operatorName: operator.name,
           activeConversations,
           timeLogged,
-          hasCapacity: activeConversations < 5,
+          hasCapacity: activeConversations < MAX_CONVERSATIONS_PER_OPERATOR,
         };
       })
     );
 
-    // Filtrar operadores com capacidade (menos de 5 atendimentos)
+    // Filtrar operadores com capacidade (menos de 15 atendimentos)
     const operatorsWithCapacity = operatorPriorities.filter(op => op.hasCapacity);
 
     let selectedOperator;
@@ -549,12 +554,13 @@ export class LinesService {
       });
       selectedOperator = operatorsWithCapacity[0];
     } else {
-      // Se todos têm 5+ atendimentos, escolher o com mais tempo logado
-      operatorPriorities.sort((a, b) => b.timeLogged - a.timeLogged);
-      selectedOperator = operatorPriorities[0];
+      // TODOS os operadores estão no limite de 15 conversas
+      // Mensagem vai para o LIMBO (sem dono) até alguém finalizar uma conversa
+      console.log(`⚠️ [LinesService] Todos os ${operatorPriorities.length} operadores estão no limite de ${MAX_CONVERSATIONS_PER_OPERATOR} conversas. Mensagem vai para o LIMBO.`);
+      return null;
     }
 
-    console.log(`✅ [LinesService] Mensagem distribuída para ${selectedOperator.operatorName} (ID: ${selectedOperator.operatorId}) - ${selectedOperator.activeConversations} atendimentos, ${Math.round(selectedOperator.timeLogged / 1000 / 60)}min logado`);
+    console.log(`✅ [LinesService] Mensagem distribuída para ${selectedOperator.operatorName} (ID: ${selectedOperator.operatorId}) - ${selectedOperator.activeConversations}/${MAX_CONVERSATIONS_PER_OPERATOR} atendimentos, ${Math.round(selectedOperator.timeLogged / 1000 / 60)}min logado`);
 
     return selectedOperator.operatorId;
   }

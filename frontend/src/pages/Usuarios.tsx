@@ -29,6 +29,7 @@ interface User {
   lineNumberId?: string;
   isOnline: boolean;
   oneToOneActive?: boolean;
+  isActive?: boolean;
 }
 
 const roleColors = {
@@ -81,14 +82,14 @@ export default function Usuarios() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    role: 'operador', 
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'operador',
     segment: '',
-    line: '',
-    oneToOneActive: false
+    oneToOneActive: false,
+    isActive: true
   });
 
   // Load data on mount
@@ -117,7 +118,8 @@ export default function Usuarios() {
           lineName: userLine?.phone,
           lineNumberId: userLine?.numberId,
           isOnline: u.status === 'Online',
-          oneToOneActive: u.oneToOneActive ?? false
+          oneToOneActive: u.oneToOneActive ?? false,
+          isActive: u.isActive ?? true
         };
       }));
 
@@ -147,19 +149,18 @@ export default function Usuarios() {
         </Badge>
       )
     },
-    { 
-      key: "lineName", 
-      label: "Linha",
-      render: (user) => user.lineName || '-'
-    },
-    { 
-      key: "lineNumberId", 
-      label: "Number ID",
-      render: (user) => user.lineNumberId || '-'
+    {
+      key: "isActive",
+      label: "Status",
+      render: (user) => (
+        <Badge className={user.isActive !== false ? "bg-success text-success-foreground" : "bg-destructive text-destructive-foreground"}>
+          {user.isActive !== false ? "Ativo" : "Inativo"}
+        </Badge>
+      )
     },
     {
       key: "isOnline",
-      label: "Status",
+      label: "Conexão",
       render: (user) => (
         <div className="flex items-center gap-2">
           <div className={cn(
@@ -174,20 +175,20 @@ export default function Usuarios() {
 
   const handleAdd = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', password: '', role: 'operador', segment: '', line: '', oneToOneActive: false });
+    setFormData({ name: '', email: '', password: '', role: 'operador', segment: '', oneToOneActive: false, isActive: true });
     setIsFormOpen(true);
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    setFormData({ 
-      name: user.name, 
-      email: user.email, 
-      password: '', 
-      role: user.role, 
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role,
       segment: user.segment ? String(user.segment) : '',
-      line: user.line ? String(user.line) : '',
-      oneToOneActive: user.oneToOneActive ?? false
+      oneToOneActive: user.oneToOneActive ?? false,
+      isActive: user.isActive ?? true
     });
     setIsFormOpen(true);
   };
@@ -237,8 +238,8 @@ export default function Usuarios() {
           email: formData.email,
           role: mapRoleToApi(formData.role),
           segment: formData.segment ? Number(formData.segment) : null,
-          line: formData.line ? Number(formData.line) : null,
           oneToOneActive: formData.oneToOneActive,
+          isActive: formData.isActive,
         };
         if (formData.password) {
           updateData.password = formData.password;
@@ -247,7 +248,6 @@ export default function Usuarios() {
         const updated = await usersService.update(Number(editingUser.id), updateData);
         setUsers(users.map(u => {
           if (u.id === editingUser.id) {
-            const userLine = lines.find(l => l.id === updated.line);
             return {
               id: String(updated.id),
               name: updated.name,
@@ -255,10 +255,9 @@ export default function Usuarios() {
               role: mapRole(updated.role),
               segment: updated.segment ?? undefined,
               line: updated.line ?? undefined,
-              lineName: userLine?.phone,
-              lineNumberId: userLine?.numberId,
               isOnline: updated.status === 'Online',
-              oneToOneActive: updated.oneToOneActive ?? false
+              oneToOneActive: updated.oneToOneActive ?? false,
+              isActive: updated.isActive ?? true
             };
           }
           return u;
@@ -274,10 +273,9 @@ export default function Usuarios() {
           password: formData.password,
           role: mapRoleToApi(formData.role),
           segment: formData.segment ? Number(formData.segment) : undefined,
-          line: formData.line ? Number(formData.line) : undefined,
           oneToOneActive: formData.oneToOneActive,
+          isActive: formData.isActive,
         });
-        const newUserLine = lines.find(l => l.id === created.line);
         setUsers([...users, {
           id: String(created.id),
           name: created.name,
@@ -285,10 +283,9 @@ export default function Usuarios() {
           role: mapRole(created.role),
           segment: created.segment ?? undefined,
           line: created.line ?? undefined,
-          lineName: newUserLine?.phone,
-          lineEvolutionName: newUserLine?.evolutionName,
           isOnline: created.status === 'Online',
-          oneToOneActive: created.oneToOneActive ?? false
+          oneToOneActive: created.oneToOneActive ?? false,
+          isActive: created.isActive ?? true
         }]);
         toast({
           title: "Usuário criado",
@@ -369,27 +366,20 @@ export default function Usuarios() {
           </Select>
         </div>
       )}
-      <div className="space-y-2">
-        <Label htmlFor="line">Linha WhatsApp</Label>
-        <Select value={formData.line} onValueChange={(value) => setFormData({ ...formData, line: value })}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione uma linha" />
-          </SelectTrigger>
-          <SelectContent>
-            {lines
-              .filter((line) => {
-                // Filtrar apenas linhas sem vínculo (que não estão atribuídas a nenhum usuário)
-                const isLineInUse = users.some((user) => user.line === line.id);
-                return !isLineInUse;
-              })
-              .map((line) => (
-              <SelectItem key={line.id} value={String(line.id)}>
-                {line.phone} {line.numberId ? `(${line.numberId})` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">Define qual linha será usada para envio de mensagens (apenas linhas sem vínculo)</p>
+      {/* Usuário Ativo toggle */}
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label className="text-base font-medium">Usuário Ativo</Label>
+          <p className="text-sm text-muted-foreground">
+            Se desativado, o usuário não poderá fazer login
+          </p>
+        </div>
+        <input
+          type="checkbox"
+          checked={formData.isActive}
+          onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+          className="h-4 w-4 rounded border-gray-300"
+        />
       </div>
       {formData.role === 'operador' && (
         <div className="flex items-center justify-between rounded-lg border p-4">

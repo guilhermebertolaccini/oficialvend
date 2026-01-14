@@ -16,8 +16,15 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   @Post()
-  @Roles(Role.admin)
-  create(@Body() createUserDto: CreateUserDto) {
+  @Roles(Role.admin, Role.digital)
+  create(@Body() createUserDto: CreateUserDto, @CurrentUser() currentUser: any) {
+    // Digital só pode criar digital, supervisor, operator (não admin)
+    if (currentUser.role === Role.digital) {
+      const allowedRoles = [Role.digital, Role.supervisor, Role.operator];
+      if (!allowedRoles.includes(createUserDto.role as Role)) {
+        throw new Error('Você não tem permissão para criar usuários com este perfil');
+      }
+    }
     return this.usersService.create(createUserDto);
   }
 

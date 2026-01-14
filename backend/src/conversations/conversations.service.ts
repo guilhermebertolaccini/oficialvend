@@ -252,12 +252,42 @@ export class ConversationsService {
     return conversations;
   }
 
+  // Limite máximo de conversas simultâneas por operador
+  private readonly MAX_CONVERSATIONS_PER_OPERATOR = 15;
+
+  /**
+   * Conta quantas conversas ativas (não tabuladas) um operador tem
+   */
+  async getActiveConversationCount(userId: number): Promise<number> {
+    const count = await this.prisma.conversation.groupBy({
+      by: ['contactPhone'],
+      where: {
+        userId: userId,
+        tabulation: null,
+      },
+    });
+    return count.length; // Número de contatos distintos
+  }
+
   /**
    * Reclama (claim) um lote de conversas sem dono do segmento para o operador.
    * Isso implementa a distribuição controlada: em vez de dar todas as conversas
    * pendentes para o primeiro operador, distribui em lotes pequenos.
+   * Respeita o limite de MAX_CONVERSATIONS_PER_OPERATOR conversas simultâneas.
    */
   async claimPendingConversations(userId: number, segmentId: number, operatorName: string, limit: number = 3): Promise<number> {
+    // Verificar quantas conversas o operador já tem
+    const currentCount = await this.getActiveConversationCount(userId);
+    const availableSlots = this.MAX_CONVERSATIONS_PER_OPERATOR - currentCount;
+
+    if (availableSlots <= 0) {
+      console.log(`⚠️ [ClaimPending] ${operatorName} já tem ${currentCount} conversas (limite: ${this.MAX_CONVERSATIONS_PER_OPERATOR})`);
+      return 0;
+    }
+
+    // Ajustar o limite para não ultrapassar o máximo permitido
+    const effectiveLimit = Math.min(limit, availableSlots);
+
     // Buscar as conversas mais antigas sem dono do segmento (uma por contato)
     const pendingConversations = await this.prisma.conversation.findMany({
       where: {
@@ -267,14 +297,14 @@ export class ConversationsService {
       },
       distinct: ['contactPhone'],
       orderBy: { datetime: 'asc' },
-      take: limit,
+      take: effectiveLimit,
       select: { contactPhone: true },
     });
 
     if (pendingConversations.length === 0) return 0;
 
     const phonesToClaim = pendingConversations.map(c => c.contactPhone);
-    console.log(`📥 [ClaimPending] ${operatorName} reclamando ${phonesToClaim.length} conversas`);
+    console.log(`📥 [ClaimPending] ${operatorName} reclamando ${phonesToClaim.length} conversas (atual: ${currentCount}, limite: ${this.MAX_CONVERSATIONS_PER_OPERATOR})`);
 
     // Atualizar TODAS as mensagens desses contatos para pertencerem ao operador
     const result = await this.prisma.conversation.updateMany({

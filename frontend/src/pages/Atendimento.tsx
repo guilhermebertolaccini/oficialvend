@@ -370,6 +370,10 @@ export default function Atendimento() {
       );
 
       // Aplicar filtro
+      // Stand-by: operador enviou última mensagem E mais de 6 horas sem resposta do cliente
+      // Atendimento: cliente enviou última mensagem OU operador respondeu há menos de 6 horas
+      const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+
       if (conversationFilter !== 'todas') {
         groups = groups.filter(group => {
           if (conversationFilter === 'finalizadas') {
@@ -379,13 +383,20 @@ export default function Atendimento() {
           if (group.isTabulated === true) {
             return false;
           }
+
+          const lastMessageTime = new Date(group.lastMessageTime).getTime();
+          const timeSinceLastMessage = Date.now() - lastMessageTime;
+
           if (conversationFilter === 'stand-by') {
-            // Stand By: última mensagem foi do operador (aguardando resposta do cliente)
-            return group.isFromContact === false;
+            // Stand By: última mensagem foi do operador E mais de 6 horas sem resposta
+            return group.isFromContact === false && timeSinceLastMessage > SIX_HOURS_MS;
           }
           if (conversationFilter === 'atendimento') {
-            // Atendimento: última mensagem foi do cliente (aguardando resposta do operador)
-            return group.isFromContact === true;
+            // Atendimento: 
+            // - última mensagem foi do cliente, OU
+            // - operador respondeu há menos de 6 horas (aguardando cliente responder)
+            return group.isFromContact === true ||
+              (group.isFromContact === false && timeSinceLastMessage <= SIX_HOURS_MS);
           }
           return true;
         });
