@@ -20,8 +20,8 @@ export class UsersController {
   create(@Body() createUserDto: CreateUserDto, @CurrentUser() currentUser: any) {
     // Digital só pode criar digital, supervisor, operator (não admin)
     if (currentUser.role === Role.digital) {
-      const allowedRoles = [Role.digital, Role.supervisor, Role.operator];
-      if (!allowedRoles.includes(createUserDto.role as Role)) {
+      const allowedRoles = ['digital', 'supervisor', 'operator'];
+      if (!allowedRoles.includes(createUserDto.role)) {
         throw new Error('Você não tem permissão para criar usuários com este perfil');
       }
     }
