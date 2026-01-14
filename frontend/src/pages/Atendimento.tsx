@@ -49,6 +49,7 @@ interface ConversationGroup {
   unread?: boolean;
   messages: APIConversation[];
   isTabulated?: boolean; // Indica se a conversa foi tabulada
+  tabulationId?: number | null; // ID da tabulação de finalização
 }
 
 export default function Atendimento() {
@@ -97,7 +98,7 @@ export default function Atendimento() {
 
   // Estado para filtro de conversas
   type FilterType = 'todas' | 'stand-by' | 'atendimento' | 'finalizadas';
-  const [conversationFilter, setConversationFilter] = useState<FilterType>('todas');
+  const [conversationFilter, setConversationFilter] = useState<FilterType>('atendimento');
 
   // Estado para pesquisa de tabulação
   const [tabulationSearch, setTabulationSearch] = useState("");
@@ -333,10 +334,16 @@ export default function Atendimento() {
             existing.lastMessageTime = conv.datetime;
             existing.isFromContact = conv.sender === 'contact';
             existing.isTabulated = isTabulated;
+            if (isTabulated && conv.tabulation) {
+              existing.tabulationId = conv.tabulation;
+            }
           }
           // Se qualquer mensagem for tabulada, a conversa é tabulada
           if (isTabulated) {
             existing.isTabulated = true;
+            if (conv.tabulation) {
+              existing.tabulationId = conv.tabulation;
+            }
           }
         } else {
           groupedMap.set(conv.contactPhone, {
@@ -346,6 +353,7 @@ export default function Atendimento() {
             lastMessageTime: conv.datetime,
             isFromContact: conv.sender === 'contact',
             isTabulated: isTabulated,
+            tabulationId: conv.tabulation,
             messages: [conv],
           });
         }
@@ -1294,8 +1302,8 @@ export default function Atendimento() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${isRealtimeConnected
-                          ? 'bg-success/10 text-success'
-                          : 'bg-muted text-muted-foreground'
+                        ? 'bg-success/10 text-success'
+                        : 'bg-muted text-muted-foreground'
                         }`}>
                         {isRealtimeConnected ? (
                           <Wifi className="h-3 w-3" />
@@ -1443,11 +1451,11 @@ export default function Atendimento() {
             {/* Botões de Filtro */}
             <div className="flex items-center gap-2 flex-wrap">
               <Button
-                variant={conversationFilter === 'todas' ? 'default' : 'outline'}
+                variant={conversationFilter === 'atendimento' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setConversationFilter('todas')}
+                onClick={() => setConversationFilter('atendimento')}
               >
-                Todas
+                Atendimento
               </Button>
               <Button
                 variant={conversationFilter === 'stand-by' ? 'default' : 'outline'}
@@ -1457,18 +1465,18 @@ export default function Atendimento() {
                 Stand By
               </Button>
               <Button
-                variant={conversationFilter === 'atendimento' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setConversationFilter('atendimento')}
-              >
-                Atendimento
-              </Button>
-              <Button
                 variant={conversationFilter === 'finalizadas' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setConversationFilter('finalizadas')}
               >
                 Finalizadas
+              </Button>
+              <Button
+                variant={conversationFilter === 'todas' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setConversationFilter('todas')}
+              >
+                Todas
               </Button>
             </div>
           </div>
@@ -1524,6 +1532,15 @@ export default function Atendimento() {
                             {conv.lastMessage}
                           </p>
                         </div>
+                        {/* Exibir tabulação para conversas finalizadas */}
+                        {conv.isTabulated && conv.tabulationId && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-400">
+                              <FileText className="h-2.5 w-2.5" />
+                              {tabulations.find(t => t.id === conv.tabulationId)?.name || `Tab. #${conv.tabulationId}`}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       {conv.unread && (
                         <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
