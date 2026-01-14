@@ -78,9 +78,21 @@ export class ConversationsController {
       return this.conversationsService.findAllByEmailDomain(where, userDomain);
     }
 
-    // Operador: buscar conversas apenas por userId (não por userLine)
-    // Isso permite que as conversas continuem aparecendo mesmo se a linha foi banida
-    return this.conversationsService.findActiveConversations(undefined, user.id, daysToFilter);
+    // Operador: primeiro reclamar um lote de conversas pendentes
+    // Depois buscar todas as conversas dele (incluindo as recém-reclamadas)
+    if (user.segment) {
+      const claimed = await this.conversationsService.claimPendingConversations(
+        user.id,
+        user.segment,
+        user.name,
+        3 // Limite de conversas por lote
+      );
+      if (claimed > 0) {
+        console.log(`📥 Operador ${user.name} reclamou ${claimed} conversas pendentes`);
+      }
+    }
+
+    return this.conversationsService.findActiveConversations(undefined, user.id, daysToFilter, user.segment);
   }
 
   @Get('tabulated')

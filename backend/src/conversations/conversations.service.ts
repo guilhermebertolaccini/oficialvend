@@ -10,7 +10,7 @@ export class ConversationsService {
     private prisma: PrismaService,
     @Inject(forwardRef(() => WebsocketGateway))
     private websocketGateway: WebsocketGateway,
-  ) {}
+  ) { }
 
   async create(createConversationDto: CreateConversationDto) {
     const conversation = await this.prisma.conversation.create({
@@ -45,17 +45,17 @@ export class ConversationsService {
   async findAll(filters?: any) {
     // Remover campos inválidos que não existem no schema
     const { search, ...validFilters } = filters || {};
-    
+
     // Se houver busca por texto, aplicar filtros
-    const where = search 
+    const where = search
       ? {
-          ...validFilters,
-          OR: [
-            { contactName: { contains: search, mode: 'insensitive' } },
-            { contactPhone: { contains: search } },
-            { message: { contains: search, mode: 'insensitive' } },
-          ],
-        }
+        ...validFilters,
+        OR: [
+          { contactName: { contains: search, mode: 'insensitive' } },
+          { contactPhone: { contains: search } },
+          { message: { contains: search, mode: 'insensitive' } },
+        ],
+      }
       : validFilters;
 
     return this.prisma.conversation.findMany({
@@ -112,18 +112,18 @@ export class ConversationsService {
     // Aplicar filtro de userId na busca de conversas
     const where = search
       ? {
-          ...validFilters,
-          userId: { in: userIds }, // Filtrar por operadores do mesmo domínio
-          OR: [
-            { contactName: { contains: search, mode: 'insensitive' } },
-            { contactPhone: { contains: search } },
-            { message: { contains: search, mode: 'insensitive' } },
-          ],
-        }
+        ...validFilters,
+        userId: { in: userIds }, // Filtrar por operadores do mesmo domínio
+        OR: [
+          { contactName: { contains: search, mode: 'insensitive' } },
+          { contactPhone: { contains: search } },
+          { message: { contains: search, mode: 'insensitive' } },
+        ],
+      }
       : {
-          ...validFilters,
-          userId: { in: userIds }, // Filtrar por operadores do mesmo domínio
-        };
+        ...validFilters,
+        userId: { in: userIds }, // Filtrar por operadores do mesmo domínio
+      };
 
     return this.prisma.conversation.findMany({
       where,
@@ -190,21 +190,11 @@ export class ConversationsService {
     });
   }
 
-  async findActiveConversations(userLine?: number, userId?: number, daysToFilter: number = 3) {
+  async findActiveConversations(userLine?: number, userId?: number, daysToFilter: number = 3, segmentId?: number) {
     const where: any = {
       tabulation: null,
     };
 
-    // IMPORTANTE: Para operadores, buscar apenas por userId (não por userLine)
-    // Isso permite que as conversas continuem aparecendo mesmo se a linha foi banida
-    if (userId) {
-      where.userId = userId;
-    } else if (userLine) {
-      // Fallback: se não tiver userId, usar userLine (para compatibilidade)
-      where.userLine = userLine;
-    }
-
-    // Filtrar conversas com interação nos últimos X dias
     // Calcular data limite (X dias atrás)
     const dateLimitMs = Date.now() - (daysToFilter * 24 * 60 * 60 * 1000);
     const dateLimit = new Date(dateLimitMs);
@@ -212,6 +202,23 @@ export class ConversationsService {
     where.datetime = {
       gte: dateLimit,
     };
+
+    // Logica de filtro:
+    // 1. Se tiver userId e segmentId (Operador no novo modelo Pool):
+    //    Traz conversas DELE (userId) OU conversas SEM DONO do segmento DELE (userId: null, segment: segmentId)
+    // 2. Se tiver apenas userId: Traz apenas as DELE
+    // 3. Se tiver userLine (legado): Traz por userLine
+
+    if (userId && segmentId) {
+      where.OR = [
+        { userId: userId },
+        { userId: null, segment: segmentId }
+      ];
+    } else if (userId) {
+      where.userId = userId;
+    } else if (userLine) {
+      where.userLine = userLine;
+    }
 
     // Retornar TODAS as mensagens não tabuladas dos últimos X dias (o frontend vai agrupar)
     // Usar select explícito para evitar problemas com campos que podem não existir no banco
@@ -243,6 +250,45 @@ export class ConversationsService {
     });
 
     return conversations;
+  }
+
+  /**
+   * Reclama (claim) um lote de conversas sem dono do segmento para o operador.
+   * Isso implementa a distribuição controlada: em vez de dar todas as conversas
+   * pendentes para o primeiro operador, distribui em lotes pequenos.
+   */
+  async claimPendingConversations(userId: number, segmentId: number, operatorName: string, limit: number = 3): Promise<number> {
+    // Buscar as conversas mais antigas sem dono do segmento (uma por contato)
+    const pendingConversations = await this.prisma.conversation.findMany({
+      where: {
+        userId: null,
+        segment: segmentId,
+        tabulation: null,
+      },
+      distinct: ['contactPhone'],
+      orderBy: { datetime: 'asc' },
+      take: limit,
+      select: { contactPhone: true },
+    });
+
+    if (pendingConversations.length === 0) return 0;
+
+    const phonesToClaim = pendingConversations.map(c => c.contactPhone);
+    console.log(`📥 [ClaimPending] ${operatorName} reclamando ${phonesToClaim.length} conversas`);
+
+    // Atualizar TODAS as mensagens desses contatos para pertencerem ao operador
+    const result = await this.prisma.conversation.updateMany({
+      where: {
+        contactPhone: { in: phonesToClaim },
+        userId: null,
+        segment: segmentId,
+        tabulation: null,
+      },
+      data: { userId: userId, userName: operatorName },
+    });
+
+    console.log(`✅ [ClaimPending] ${result.count} mensagens atualizadas`);
+    return phonesToClaim.length;
   }
 
   async findTabulatedConversations(userLine?: number, userId?: number, daysToFilter: number = 3) {
