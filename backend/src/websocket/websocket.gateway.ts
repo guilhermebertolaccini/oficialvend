@@ -244,19 +244,20 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     let currentLineId: number | null = data.lineId || null;
 
     // Se não foi informada uma linha específica (ex: resposta a conversa existente)
+    // IMPORTANTE: Buscar pela linha que RECEBEU a mensagem do cliente, não pelo operador
     if (!currentLineId) {
       const activeConversation = await (this.prisma as any).conversation.findFirst({
         where: {
           contactPhone: data.contactPhone,
-          userId: user.id,
           tabulation: null, // Apenas conversas ativas
+          userLine: { not: null }, // Apenas conversas que têm linha associada
         },
         orderBy: { datetime: 'desc' },
       });
 
       if (activeConversation && activeConversation.userLine) {
         currentLineId = activeConversation.userLine;
-        console.log(`ℹ️ [WebSocket] Usando linha da conversa existente: ${currentLineId}`);
+        console.log(`ℹ️ [WebSocket] Usando linha da conversa existente (recebeu mensagem): ${currentLineId}`);
       }
     }
 
