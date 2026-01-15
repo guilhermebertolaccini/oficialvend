@@ -131,6 +131,7 @@ export default function Atendimento() {
     if (data.message) {
       const newMsg = data.message as APIConversation;
       const msgKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
+      console.log(`[Atendimento] Mensagem: contactPhone=${newMsg.contactPhone}, userLine=${newMsg.userLine}, msgKey=${msgKey}`);
 
       // Play sound for incoming messages
       if (newMsg.sender === 'contact') {
@@ -138,12 +139,15 @@ export default function Atendimento() {
       }
 
       setConversations(prev => {
+        console.log(`[Atendimento] Conversas atuais: ${prev.length}, keys=[${prev.map(c => getConversationKey(c.contactPhone, c.userLine)).join(', ')}]`);
         const existing = prev.find(c => getConversationKey(c.contactPhone, c.userLine) === msgKey);
+        console.log(`[Atendimento] Conversa encontrada: ${existing ? 'SIM' : 'NÃO'}`);
 
         if (existing) {
           // Add message to existing conversation
           const updated = prev.map(conv => {
             if (getConversationKey(conv.contactPhone, conv.userLine) === msgKey) {
+              console.log(`[Atendimento] Adicionando mensagem à conversa existente`);
               return {
                 ...conv,
                 messages: [...conv.messages, newMsg].sort((a, b) =>
@@ -161,6 +165,7 @@ export default function Atendimento() {
           );
         } else {
           // Create new conversation group
+          console.log(`[Atendimento] Criando nova conversa`);
           const newGroup: ConversationGroup = {
             contactPhone: newMsg.contactPhone,
             contactName: newMsg.contactName,
