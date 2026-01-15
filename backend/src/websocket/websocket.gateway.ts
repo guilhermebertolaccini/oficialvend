@@ -633,21 +633,28 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       userLine: conversation.userLine,
     });
 
+    // DEBUG: Listar todos os usuários conectados
+    console.log(`  → Usuários conectados: [${Array.from(this.connectedUsers.keys()).join(', ')}]`);
+
     let messageSent = false;
 
     // 1. Primeiro, tentar enviar para o operador específico que está atendendo (userId)
     if (conversation.userId) {
-      const socketId = this.connectedUsers.get(conversation.userId);
+      // Garantir que userId é um número (pode vir como string)
+      const userIdNum = Number(conversation.userId);
+      const socketId = this.connectedUsers.get(userIdNum);
+      console.log(`  → Procurando userId ${userIdNum} (tipo: ${typeof userIdNum}) em connectedUsers: socketId=${socketId || 'NÃO ENCONTRADO'}`);
+
       if (socketId) {
         const user = await (this.prisma as any).user.findUnique({
-          where: { id: conversation.userId },
+          where: { id: userIdNum },
         });
         if (user && user.status === 'Online') {
           console.log(`  ✅ Enviando para ${user.name} (${user.role}) - operador específico (userId: ${conversation.userId})`);
           this.server.to(socketId).emit('new_message', { message: conversation });
           messageSent = true;
         } else {
-          console.warn(`  ⚠️ Operador ${conversation.userId} não encontrado ou offline`);
+          console.warn(`  ⚠️ Operador ${conversation.userId} não encontrado ou offline (status: ${user?.status || 'null'})`);
         }
       } else {
         console.warn(`  ⚠️ Operador ${conversation.userId} não está conectado via WebSocket`);
