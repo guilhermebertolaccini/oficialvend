@@ -160,9 +160,12 @@ export default function Atendimento() {
             }
             return conv;
           });
-          return updated.sort((a, b) =>
+          console.log(`[Atendimento] Ordenando conversas, timestamps: ${updated.map(c => `${c.contactPhone.slice(-4)}:${c.lastMessageTime}`).join(', ')}`);
+          const sorted = updated.sort((a, b) =>
             new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
           );
+          console.log(`[Atendimento] Após ordenação: ${sorted.map(c => c.contactPhone.slice(-4)).join(', ')}`);
+          return sorted;
         } else {
           // Create new conversation group
           console.log(`[Atendimento] Criando nova conversa`);
