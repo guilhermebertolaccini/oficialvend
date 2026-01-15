@@ -1531,7 +1531,7 @@ export default function Atendimento() {
               <div className="p-2 space-y-1">
                 {conversations.map((conv) => (
                   <button
-                    key={conv.contactPhone}
+                    key={getConversationKey(conv.contactPhone, conv.userLine)}
                     onClick={() => {
                       setSelectedConversation(conv);
                       setIsSidebarOpen(false); // Fechar sidebar em mobile quando conversa é selecionada
