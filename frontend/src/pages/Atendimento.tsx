@@ -43,6 +43,7 @@ import { useAuth } from "@/contexts/AuthContext";
 interface ConversationGroup {
   contactPhone: string;
   contactName: string;
+  userLine?: number | null; // Linha da plataforma usada nesta conversa
   lastMessage: string;
   lastMessageTime: string;
   isFromContact: boolean;
@@ -51,6 +52,11 @@ interface ConversationGroup {
   isTabulated?: boolean; // Indica se a conversa foi tabulada
   tabulationId?: number | null; // ID da tabulação de finalização
 }
+
+// Chave única para agrupar conversas: contactPhone + userLine
+const getConversationKey = (contactPhone: string, userLine?: number | null): string => {
+  return `${contactPhone}-${userLine || 0}`;
+};
 
 export default function Atendimento() {
   const { user } = useAuth();
@@ -124,6 +130,7 @@ export default function Atendimento() {
 
     if (data.message) {
       const newMsg = data.message as APIConversation;
+      const msgKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
 
       // Play sound for incoming messages
       if (newMsg.sender === 'contact') {
@@ -131,12 +138,12 @@ export default function Atendimento() {
       }
 
       setConversations(prev => {
-        const existing = prev.find(c => c.contactPhone === newMsg.contactPhone);
+        const existing = prev.find(c => getConversationKey(c.contactPhone, c.userLine) === msgKey);
 
         if (existing) {
           // Add message to existing conversation
           const updated = prev.map(conv => {
-            if (conv.contactPhone === newMsg.contactPhone) {
+            if (getConversationKey(conv.contactPhone, conv.userLine) === msgKey) {
               return {
                 ...conv,
                 messages: [...conv.messages, newMsg].sort((a, b) =>
@@ -157,6 +164,7 @@ export default function Atendimento() {
           const newGroup: ConversationGroup = {
             contactPhone: newMsg.contactPhone,
             contactName: newMsg.contactName,
+            userLine: newMsg.userLine,
             lastMessage: newMsg.message,
             lastMessageTime: newMsg.datetime,
             isFromContact: newMsg.sender === 'contact',
@@ -167,8 +175,8 @@ export default function Atendimento() {
         }
       });
 
-      // Update selected conversation if it's the same contact (usando ref)
-      if (selectedPhoneRef.current === newMsg.contactPhone) {
+      // Update selected conversation if it's the same contact+line (usando ref)
+      if (selectedConvKeyRef.current === msgKey) {
         setSelectedConversation(prev => {
           if (!prev) return null;
           return {
@@ -205,11 +213,12 @@ export default function Atendimento() {
       }
 
       setConversations(prev => {
-        const existing = prev.find(c => c.contactPhone === newMsg.contactPhone);
+        const sentKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
+        const existing = prev.find(c => getConversationKey(c.contactPhone, c.userLine) === sentKey);
 
         if (existing) {
           return prev.map(conv => {
-            if (conv.contactPhone === newMsg.contactPhone) {
+            if (getConversationKey(conv.contactPhone, conv.userLine) === sentKey) {
               return {
                 ...conv,
                 messages: [...conv.messages, newMsg].sort((a, b) =>
@@ -229,6 +238,7 @@ export default function Atendimento() {
           const newGroup: ConversationGroup = {
             contactPhone: newMsg.contactPhone,
             contactName: newMsg.contactName,
+            userLine: newMsg.userLine,
             lastMessage: newMsg.message,
             lastMessageTime: newMsg.datetime,
             isFromContact: false,
@@ -239,7 +249,8 @@ export default function Atendimento() {
       });
 
       // Atualizar conversa selecionada se for a mesma (usando ref)
-      if (selectedPhoneRef.current === newMsg.contactPhone) {
+      const sentMsgKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
+      if (selectedConvKeyRef.current === sentMsgKey) {
         setSelectedConversation(prev => {
           if (!prev) return null;
           return {
@@ -298,13 +309,16 @@ export default function Atendimento() {
   };
 
 
-  // Ref para armazenar o contactPhone selecionado (evita loop infinito)
-  const selectedPhoneRef = useRef<string | null>(null);
+
+  // Ref para armazenar a chave da conversa selecionada (contactPhone+userLine)
+  const selectedConvKeyRef = useRef<string | null>(null);
 
   // Atualizar ref quando selectedConversation mudar
   useEffect(() => {
-    selectedPhoneRef.current = selectedConversation?.contactPhone || null;
-  }, [selectedConversation?.contactPhone]);
+    selectedConvKeyRef.current = selectedConversation
+      ? getConversationKey(selectedConversation.contactPhone, selectedConversation.userLine)
+      : null;
+  }, [selectedConversation?.contactPhone, selectedConversation?.userLine]);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -317,11 +331,12 @@ export default function Atendimento() {
       // Combinar todos os dados
       const allData = [...activeData, ...tabulatedData];
 
-      // Group conversations by contact phone
+      // Group conversations by contact phone + userLine (cada linha é um chat separado)
       const groupedMap = new Map<string, ConversationGroup>();
 
       allData.forEach((conv) => {
-        const existing = groupedMap.get(conv.contactPhone);
+        const convKey = getConversationKey(conv.contactPhone, conv.userLine);
+        const existing = groupedMap.get(convKey);
         const isTabulated = conv.tabulation !== null && conv.tabulation !== undefined;
 
         if (existing) {
@@ -346,9 +361,10 @@ export default function Atendimento() {
             }
           }
         } else {
-          groupedMap.set(conv.contactPhone, {
+          groupedMap.set(convKey, {
             contactPhone: conv.contactPhone,
             contactName: conv.contactName,
+            userLine: conv.userLine,
             lastMessage: conv.message,
             lastMessageTime: conv.datetime,
             isFromContact: conv.sender === 'contact',
@@ -405,9 +421,9 @@ export default function Atendimento() {
       setConversations(groups);
 
       // Update selected conversation if it exists (usando ref para evitar loop)
-      const currentSelectedPhone = selectedPhoneRef.current;
-      if (currentSelectedPhone) {
-        const updated = groups.find(g => g.contactPhone === currentSelectedPhone);
+      const currentSelectedKey = selectedConvKeyRef.current;
+      if (currentSelectedKey) {
+        const updated = groups.find(g => getConversationKey(g.contactPhone, g.userLine) === currentSelectedKey);
         if (updated) {
           setSelectedConversation(updated);
         }
