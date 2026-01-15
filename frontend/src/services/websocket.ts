@@ -34,7 +34,7 @@ class RealtimeWebSocket {
       if (this.socket && !this.socket.connected) {
         this.socket.auth = { token };
         this.socket.connect();
-        
+
         const onConnect = () => {
           this.isConnecting = false;
           console.log('[Socket.IO] Connected');
@@ -43,7 +43,7 @@ class RealtimeWebSocket {
           this.socket?.off('connect_error', onError);
           resolve();
         };
-        
+
         const onError = (error: Error) => {
           this.isConnecting = false;
           console.error('[Socket.IO] Connection Error:', error.message);
@@ -51,7 +51,7 @@ class RealtimeWebSocket {
           this.socket?.off('connect_error', onError);
           reject(error);
         };
-        
+
         this.socket.once('connect', onConnect);
         this.socket.once('connect_error', onError);
         return;
@@ -120,16 +120,22 @@ class RealtimeWebSocket {
   }
 
   private registerEventOnSocket(eventType: string) {
-    if (!this.socket || eventType === 'all' || this.registeredEvents.has(eventType)) return;
+    if (!this.socket || eventType === 'all' || this.registeredEvents.has(eventType)) {
+      console.log(`[Socket.IO] registerEventOnSocket: ${eventType} - socket=${!!this.socket}, already=${this.registeredEvents.has(eventType)}`);
+      return;
+    }
 
     this.registeredEvents.add(eventType);
+    console.log(`[Socket.IO] Registrando listener para: ${eventType}`);
+
     this.socket.on(eventType, (data) => {
-      console.log('[Socket.IO] Message received:', eventType, data);
+      console.log(`[Socket.IO] ✉️ Mensagem recebida: ${eventType}`, data);
       const handlerSet = this.handlers.get(eventType);
+      console.log(`[Socket.IO] Handlers para ${eventType}: ${handlerSet?.size || 0}`);
       if (handlerSet) {
         handlerSet.forEach(handler => handler(data));
       }
-      
+
       // Também disparar para handlers 'all'
       const allHandlers = this.handlers.get('all');
       if (allHandlers) {
@@ -159,6 +165,8 @@ class RealtimeWebSocket {
   }
 
   subscribe(eventType: string, handler: MessageHandler): () => void {
+    console.log(`[Socket.IO] subscribe: ${eventType}, socket connected=${this.socket?.connected}, registeredEvents=[${Array.from(this.registeredEvents).join(', ')}]`);
+
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
     }
