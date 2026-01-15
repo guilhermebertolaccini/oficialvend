@@ -916,15 +916,21 @@ export default function Atendimento() {
     if (!selectedConversation) return;
 
     try {
-      await conversationsService.tabulate(selectedConversation.contactPhone, tabulationId);
+      // Passar userLine para tabular apenas esta conversa específica (não outras do mesmo contato)
+      await conversationsService.tabulate(
+        selectedConversation.contactPhone,
+        tabulationId,
+        selectedConversation.userLine ?? undefined
+      );
       playSuccessSound();
       toast({
         title: "Conversa tabulada",
         description: "A conversa foi tabulada com sucesso",
       });
 
-      // Remove from active conversations
-      setConversations(prev => prev.filter(c => c.contactPhone !== selectedConversation.contactPhone));
+      // Remove apenas esta conversa específica (usando chave composta)
+      const convKey = getConversationKey(selectedConversation.contactPhone, selectedConversation.userLine);
+      setConversations(prev => prev.filter(c => getConversationKey(c.contactPhone, c.userLine) !== convKey));
       setSelectedConversation(null);
     } catch (error) {
       playErrorSound();

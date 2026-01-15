@@ -434,13 +434,23 @@ export class ConversationsService {
     });
   }
 
-  async tabulateConversation(contactPhone: string, tabulationId: number) {
-    // Atualizar todas as mensagens daquele contactPhone que ainda não foram tabuladas
+  async tabulateConversation(contactPhone: string, tabulationId: number, userLine?: number) {
+    // Construir WHERE clause - se userLine foi fornecido, tabular apenas a conversa específica
+    const where: any = {
+      contactPhone,
+      tabulation: null,
+    };
+
+    // Se userLine foi fornecido, adicionar ao filtro para tabular apenas essa linha
+    if (userLine !== undefined && userLine !== null) {
+      where.userLine = userLine;
+      console.log(`📋 [Tabulate] Tabulando conversa específica: ${contactPhone} na linha ${userLine}`);
+    } else {
+      console.log(`📋 [Tabulate] Tabulando TODAS as conversas de: ${contactPhone}`);
+    }
+
     return this.prisma.conversation.updateMany({
-      where: {
-        contactPhone,
-        tabulation: null,
-      },
+      where,
       data: {
         tabulation: tabulationId,
       },

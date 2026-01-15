@@ -183,7 +183,7 @@ export class ConversationsController {
     @Param('phone') phone: string,
     @Body() tabulateDto: TabulateConversationDto,
   ) {
-    return this.conversationsService.tabulateConversation(phone, tabulateDto.tabulationId);
+    return this.conversationsService.tabulateConversation(phone, tabulateDto.tabulationId, tabulateDto.userLine);
   }
 
   @Post('recall/:phone')

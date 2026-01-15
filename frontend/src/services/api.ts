@@ -624,10 +624,10 @@ export const conversationsService = {
     });
   },
 
-  tabulate: async (phone: string, tabulationId: number): Promise<void> => {
+  tabulate: async (phone: string, tabulationId: number, userLine?: number): Promise<void> => {
     await apiRequest(`/conversations/tabulate/${encodeURIComponent(phone)}`, {
       method: 'POST',
-      body: JSON.stringify({ tabulationId }),
+      body: JSON.stringify({ tabulationId, userLine }),
     });
   },
 
