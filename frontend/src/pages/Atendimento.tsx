@@ -368,16 +368,14 @@ export default function Atendimento() {
             existing.lastMessage = conv.message;
             existing.lastMessageTime = conv.datetime;
             existing.isFromContact = conv.sender === 'contact';
+            // IMPORTANTE: Conversa é tabulada se a ÚLTIMA mensagem for tabulada, não qualquer mensagem
             existing.isTabulated = isTabulated;
             if (isTabulated && conv.tabulation) {
               existing.tabulationId = conv.tabulation;
-            }
-          }
-          // Se qualquer mensagem for tabulada, a conversa é tabulada
-          if (isTabulated) {
-            existing.isTabulated = true;
-            if (conv.tabulation) {
-              existing.tabulationId = conv.tabulation;
+            } else if (!isTabulated) {
+              // Se a última mensagem não é tabulada, limpar tabulationId
+              existing.isTabulated = false;
+              existing.tabulationId = undefined;
             }
           }
         } else {
@@ -961,7 +959,7 @@ export default function Atendimento() {
         setIsLoadingOperators(true);
         try {
           // Buscar operadores online do mesmo segmento
-          const segment = user?.segment || selectedConversation.messages[0]?.segment;
+          const segment = user?.segmentId || selectedConversation.messages[0]?.segment;
           const operators = await usersService.getOnlineOperators(segment || undefined);
           // Filtrar o operador atual se houver
           const filtered = operators.filter(op => op.id !== user?.id);
