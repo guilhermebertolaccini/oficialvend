@@ -1089,6 +1089,219 @@ export default function Atendimento() {
     }
   }, [selectedConversation, isDeletingConversation, playSuccessSound, playErrorSound, loadConversations]);
 
+  // Função para baixar conversa como arquivo PDF
+  const handleDownloadConversation = useCallback(() => {
+    if (!selectedConversation) return;
+
+    try {
+      // Importação dinâmica do jsPDF
+      import('jspdf').then(({ default: jsPDF }) => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        const maxWidth = pageWidth - 2 * margin;
+        let y = margin;
+
+        // Função para adicionar texto com quebra de linha automática
+        const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+          doc.setFontSize(fontSize);
+          doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+
+          const lines = doc.splitTextToSize(text, maxWidth);
+          lines.forEach((line: string) => {
+            if (y + 10 > pageHeight - margin) {
+              doc.addPage();
+              y = margin;
+            }
+            doc.text(line, margin, y);
+            y += fontSize * 0.5;
+          });
+        };
+
+        // Função para adicionar separador
+        const addSeparator = () => {
+          if (y + 5 > pageHeight - margin) {
+            doc.addPage();
+            y = margin;
+          }
+          doc.setDrawColor(200, 200, 200);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 5;
+        };
+
+        // Cabeçalho
+        addText('EXPORTAÇÃO DE CONVERSA', 16, true);
+        y += 5;
+        addSeparator();
+        y += 5;
+
+        // Informações do contato
+        addText(`Contato: ${selectedConversation.contactName}`, 12, true);
+        addText(`Telefone: ${selectedConversation.contactPhone}`, 10);
+        addText(`Linha: ${selectedConversation.userLine || 'N/A'}`, 10);
+        addText(`Data de Exportação: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, 10);
+        addText(`Total de Mensagens: ${selectedConversation.messages.length}`, 10);
+
+        y += 5;
+        addSeparator();
+        y += 10;
+
+        // Mensagens
+        selectedConversation.messages.forEach((msg, index) => {
+          const sender = msg.sender === 'contact'
+            ? selectedConversation.contactName
+            : `Operador (${msg.userName || 'Desconhecido'})`;
+
+          const dateTime = format(new Date(msg.datetime), 'dd/MM/yyyy HH:mm:ss');
+
+          // Cabeçalho da mensagem
+          addText(`[${dateTime}] ${sender}`, 9, true);
+
+          // Conteúdo da mensagem baseado no tipo
+          if (msg.messageType === 'template') {
+            doc.setTextColor(0, 100, 200); // Azul para templates
+            addText('📄 TEMPLATE UTILIZADO:', 9, true);
+            doc.setTextColor(0, 0, 0);
+            addText(msg.message.replace(/^template:\s*/i, ''), 9);
+          } else if (msg.messageType === 'image') {
+            addText(`🖼️ Imagem: ${msg.message}`, 9);
+            if (msg.mediaUrl) addText(`URL: ${msg.mediaUrl}`, 8);
+          } else if (msg.messageType === 'video') {
+            addText(`🎥 Vídeo: ${msg.message}`, 9);
+            if (msg.mediaUrl) addText(`URL: ${msg.mediaUrl}`, 8);
+          } else if (msg.messageType === 'audio') {
+            addText('🔊 Áudio', 9);
+            if (msg.mediaUrl) addText(`URL: ${msg.mediaUrl}`, 8);
+          } else if (msg.messageType === 'document') {
+            addText(`📎 Documento: ${msg.message}`, 9);
+            if (msg.mediaUrl) addText(`URL: ${msg.mediaUrl}`, 8);
+          } else {
+            addText(msg.message, 9);
+          }
+
+          y += 5;
+
+          // Separador a cada 3 mensagens
+          if ((index + 1) % 3 === 0 && index < selectedConversation.messages.length - 1) {
+            doc.setDrawColor(230, 230, 230);
+            doc.line(margin + 10, y, pageWidth - margin - 10, y);
+            y += 8;
+          } else {
+            y += 3;
+          }
+        });
+
+        // Rodapé
+        y += 10;
+        addSeparator();
+        y += 5;
+        addText('FIM DA CONVERSA', 12, true);
+
+        // Salvar PDF
+        const fileName = `conversa_${selectedConversation.contactPhone}_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`;
+        doc.save(fileName);
+
+        toast({
+          title: "Download concluído",
+          description: "Conversa exportada em PDF com sucesso",
+        });
+      }).catch((error) => {
+        console.error('Erro ao carregar jsPDF:', error);
+        toast({
+          title: "Erro ao exportar",
+          description: "Não foi possível gerar o PDF. Usando formato texto...",
+          variant: "destructive",
+        });
+
+        // Fallback para TXT se jsPDF não estiver disponível
+        handleDownloadConversationTXT();
+      });
+    } catch (error) {
+      console.error('Erro ao exportar conversa:', error);
+      toast({
+        title: "Erro ao exportar",
+        description: "Ocorreu um erro ao exportar a conversa",
+        variant: "destructive",
+      });
+    }
+  }, [selectedConversation]);
+
+  // Função de fallback para download em TXT
+  const handleDownloadConversationTXT = useCallback(() => {
+    if (!selectedConversation) return;
+
+    // Formatar data e hora
+    const formatDateTime = (date: string) => {
+      return format(new Date(date), 'dd/MM/yyyy HH:mm:ss');
+    };
+
+    // Gerar conteúdo do arquivo
+    let content = '';
+    content += '==============================================\n';
+    content += '         EXPORTAÇÃO DE CONVERSA\n';
+    content += '==============================================\n\n';
+    content += `Contato: ${selectedConversation.contactName}\n`;
+    content += `Telefone: ${selectedConversation.contactPhone}\n`;
+    content += `Linha: ${selectedConversation.userLine || 'N/A'}\n`;
+    content += `Data de Exportação: ${formatDateTime(new Date().toISOString())}\n`;
+    content += `Total de Mensagens: ${selectedConversation.messages.length}\n`;
+    content += '\n==============================================\n\n';
+
+    // Adicionar mensagens
+    selectedConversation.messages.forEach((msg, index) => {
+      const sender = msg.sender === 'contact' ? selectedConversation.contactName : `Operador (${msg.userName || 'Desconhecido'})`;
+      content += `[${formatDateTime(msg.datetime)}] ${sender}:\n`;
+
+      // Se for template, destacar
+      if (msg.messageType === 'template') {
+        content += '📄 TEMPLATE UTILIZADO:\n';
+        content += `${msg.message.replace(/^template:\s*/i, '')}\n`;
+      } else if (msg.messageType === 'image') {
+        content += `🖼️ Imagem: ${msg.message}\n`;
+        if (msg.mediaUrl) content += `URL: ${msg.mediaUrl}\n`;
+      } else if (msg.messageType === 'video') {
+        content += `🎥 Vídeo: ${msg.message}\n`;
+        if (msg.mediaUrl) content += `URL: ${msg.mediaUrl}\n`;
+      } else if (msg.messageType === 'audio') {
+        content += `🔊 Áudio\n`;
+        if (msg.mediaUrl) content += `URL: ${msg.mediaUrl}\n`;
+      } else if (msg.messageType === 'document') {
+        content += `📎 Documento: ${msg.message}\n`;
+        if (msg.mediaUrl) content += `URL: ${msg.mediaUrl}\n`;
+      } else {
+        content += `${msg.message}\n`;
+      }
+
+      content += '\n';
+
+      // Adicionar separador a cada 5 mensagens para melhor legibilidade
+      if ((index + 1) % 5 === 0 && index < selectedConversation.messages.length - 1) {
+        content += '----------------------------------------------\n\n';
+      }
+    });
+
+    content += '==============================================\n';
+    content += '              FIM DA CONVERSA\n';
+    content += '==============================================\n';
+
+    // Criar e baixar arquivo
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `conversa_${selectedConversation.contactPhone}_${format(new Date(), 'yyyyMMdd_HHmmss')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Download concluído",
+      description: "Conversa exportada com sucesso",
+    });
+  }, [selectedConversation]);
+
   // Função para fechar modal e limpar estados
   const closeNewConversationModal = useCallback(() => {
     setIsNewConversationOpen(false);
@@ -1655,7 +1868,7 @@ export default function Atendimento() {
                       <TooltipContent>Editar Contato</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  {user?.role === 'admin' && (
+                  {(user?.role === 'admin' || user?.role === 'digital' || user?.role === 'supervisor') && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -1691,7 +1904,7 @@ export default function Atendimento() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {(user?.role === 'supervisor' || user?.role === 'admin') && (
+                  {(user?.role === 'supervisor' || user?.role === 'admin' || user?.role === 'digital') && (
                     <Button
                       variant="outline"
                       size="sm"
