@@ -21,14 +21,14 @@ export class ConversationsController {
   ) { }
 
   @Post()
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   create(@Body() createConversationDto: CreateConversationDto) {
     console.log('📝 [POST /conversations] Criando conversa:', JSON.stringify(createConversationDto, null, 2));
     return this.conversationsService.create(createConversationDto);
   }
 
   @Get()
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   findAll(@Query() filters: any, @CurrentUser() user: any) {
     const where: any = { ...filters };
 
@@ -143,7 +143,7 @@ export class ConversationsController {
   }
 
   @Get('contact/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   getByContactPhone(
     @Param('phone') phone: string,
     @Query('tabulated') tabulated?: string,
@@ -166,19 +166,19 @@ export class ConversationsController {
   }
 
   @Get(':id')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   findOne(@Param('id') id: string) {
     return this.conversationsService.findOne(+id);
   }
 
   @Patch(':id')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   update(@Param('id') id: string, @Body() updateConversationDto: UpdateConversationDto) {
     return this.conversationsService.update(+id, updateConversationDto);
   }
 
   @Post('tabulate/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   tabulate(
     @Param('phone') phone: string,
     @Body() tabulateDto: TabulateConversationDto,

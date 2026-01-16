@@ -12,7 +12,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('lines')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LinesController {
-  constructor(private readonly linesService: LinesService) {}
+  constructor(private readonly linesService: LinesService) { }
 
   @Post()
   @Roles(Role.admin, Role.ativador)
@@ -60,7 +60,7 @@ export class LinesController {
   }
 
   @Get('segment/:segmentId')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   getBySegment(
     @Param('segmentId') segmentId: string,
     @CurrentUser() user: any,
@@ -73,13 +73,13 @@ export class LinesController {
   }
 
   @Get('activators-productivity')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   getActivatorsProductivity() {
     return this.linesService.getActivatorsProductivity();
   }
 
   @Get('allocation-stats')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   getAllocationStats() {
     return this.linesService.getLinesAllocationStats();
   }

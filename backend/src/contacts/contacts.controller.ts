@@ -10,46 +10,46 @@ import { Role } from '@prisma/client';
 @Controller('contacts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ContactsController {
-  constructor(private readonly contactsService: ContactsService) {}
+  constructor(private readonly contactsService: ContactsService) { }
 
   @Post()
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   create(@Body() createContactDto: CreateContactDto) {
     return this.contactsService.create(createContactDto);
   }
 
   @Get()
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   findAll(@Query('search') search?: string, @Query('segment') segment?: string) {
     return this.contactsService.findAll(search, segment ? parseInt(segment) : undefined);
   }
 
   @Get('by-phone/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   findByPhone(@Param('phone') phone: string) {
     return this.contactsService.findByPhone(phone);
   }
 
   @Get(':id')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   findOne(@Param('id') id: string) {
     return this.contactsService.findOne(+id);
   }
 
   @Patch('by-phone/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   updateByPhone(@Param('phone') phone: string, @Body() updateContactDto: UpdateContactDto) {
     return this.contactsService.updateByPhone(phone, updateContactDto);
   }
 
   @Patch(':id')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   update(@Param('id') id: string, @Body() updateContactDto: UpdateContactDto) {
     return this.contactsService.update(+id, updateContactDto);
   }
 
   @Delete(':id')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   remove(@Param('id') id: string) {
     return this.contactsService.remove(+id);
   }

@@ -26,45 +26,45 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('templates')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TemplatesController {
-  constructor(private readonly templatesService: TemplatesService) {}
+  constructor(private readonly templatesService: TemplatesService) { }
 
   /**
    * CRUD de Templates
    */
 
   @Post()
-  @Roles('admin', 'supervisor')
+  @Roles('admin', 'supervisor', 'digital')
   create(@Body() createTemplateDto: CreateTemplateDto) {
     return this.templatesService.create(createTemplateDto);
   }
 
   @Get()
-  @Roles('admin', 'supervisor', 'operator')
+  @Roles('admin', 'supervisor', 'operator', 'digital')
   findAll(@Query() filters?: any) {
     return this.templatesService.findAll(filters);
   }
 
   @Get(':id')
-  @Roles('admin', 'supervisor', 'operator')
+  @Roles('admin', 'supervisor', 'operator', 'digital')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.templatesService.findOne(id);
   }
 
   @Get('segment/:segmentId')
-  @Roles('admin', 'supervisor', 'operator')
+  @Roles('admin', 'supervisor', 'operator', 'digital')
   findBySegment(@Param('segmentId', ParseIntPipe) segmentId: number) {
     return this.templatesService.findBySegment(segmentId);
   }
 
   // Buscar templates por linha (retorna templates do segmento da linha + globais)
   @Get('line/:lineId')
-  @Roles('admin', 'supervisor', 'operator')
+  @Roles('admin', 'supervisor', 'operator', 'digital')
   findByLine(@Param('lineId', ParseIntPipe) lineId: number) {
     return this.templatesService.findByLineAndSegment(lineId);
   }
 
   @Patch(':id')
-  @Roles('admin', 'supervisor')
+  @Roles('admin', 'supervisor', 'digital')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateTemplateDto: UpdateTemplateDto,
@@ -73,7 +73,7 @@ export class TemplatesController {
   }
 
   @Delete(':id')
-  @Roles('admin', 'supervisor')
+  @Roles('admin', 'supervisor', 'digital')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.templatesService.remove(id);
   }
@@ -93,7 +93,7 @@ export class TemplatesController {
    */
 
   @Post('send')
-  @Roles('admin', 'supervisor', 'operator')
+  @Roles('admin', 'supervisor', 'operator', 'digital')
   sendTemplate(@Body() sendTemplateDto: SendTemplateDto, @CurrentUser() user: any) {
     return this.templatesService.sendTemplate(sendTemplateDto, user);
   }
@@ -103,7 +103,7 @@ export class TemplatesController {
    */
 
   @Post('send/massive')
-  @Roles('admin', 'supervisor')
+  @Roles('admin', 'supervisor', 'digital')
   sendTemplateMassive(@Body() sendTemplateMassiveDto: SendTemplateMassiveDto) {
     return this.templatesService.sendTemplateMassive(sendTemplateMassiveDto);
   }
@@ -113,7 +113,7 @@ export class TemplatesController {
    */
 
   @Get(':id/history')
-  @Roles('admin', 'supervisor')
+  @Roles('admin', 'supervisor', 'digital')
   getHistory(
     @Param('id', ParseIntPipe) id: number,
     @Query() filters?: any,
@@ -122,7 +122,7 @@ export class TemplatesController {
   }
 
   @Get(':id/stats')
-  @Roles('admin', 'supervisor')
+  @Roles('admin', 'supervisor', 'digital')
   getStats(@Param('id', ParseIntPipe) id: number) {
     return this.templatesService.getTemplateStats(id);
   }
@@ -136,10 +136,10 @@ export class TemplatesController {
   @Header('Content-Disposition', 'attachment; filename="templates.csv"')
   async exportToCsv(@Query() filters?: any, @Res() res?: Response) {
     const csv = await this.templatesService.exportToCsv(filters);
-    
+
     // Adicionar BOM (Byte Order Mark) para UTF-8 para garantir encoding correto no Excel
     const csvWithBom = '\ufeff' + csv;
-    
+
     if (res) {
       res.send(csvWithBom);
     } else {

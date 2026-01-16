@@ -10,9 +10,9 @@ import { ArchivingService } from './archiving.service';
 @ApiBearerAuth('JWT-auth')
 @Controller('archiving')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.admin, Role.supervisor)
+@Roles(Role.admin, Role.supervisor, Role.digital)
 export class ArchivingController {
-  constructor(private archivingService: ArchivingService) {}
+  constructor(private archivingService: ArchivingService) { }
 
   @Get('stats')
   @ApiOperation({ summary: 'Obter estatísticas de arquivamento' })

@@ -15,17 +15,17 @@ import { Readable } from 'stream';
 @Controller('campaigns')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CampaignsController {
-  constructor(private readonly campaignsService: CampaignsService) {}
+  constructor(private readonly campaignsService: CampaignsService) { }
 
   @Post()
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   create(@Body() createCampaignDto: CreateCampaignDto) {
     console.log('📋 [Campaigns] Criando campanha:', JSON.stringify(createCampaignDto, null, 2));
     return this.campaignsService.create(createCampaignDto);
   }
 
   @Post(':id/upload')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   @UseInterceptors(FileInterceptor('file'))
   async uploadCsv(
     @Param('id') id: string,
@@ -37,7 +37,7 @@ export class CampaignsController {
     console.log(`📤 [Campaigns] Upload CSV recebido para campanha ${id}`);
     console.log(`📄 [Campaigns] Arquivo:`, file ? { name: file.originalname, size: file.size, mimetype: file.mimetype } : 'NENHUM');
     console.log(`📝 [Campaigns] Mensagem: ${message || 'Nenhuma'}`);
-    
+
     if (!file) {
       console.error('❌ [Campaigns] Arquivo CSV não recebido');
       throw new BadRequestException('Arquivo CSV é obrigatório');
@@ -87,25 +87,25 @@ export class CampaignsController {
   }
 
   @Get()
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   findAll() {
     return this.campaignsService.findAll();
   }
 
   @Get(':id')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   findOne(@Param('id') id: string) {
     return this.campaignsService.findOne(+id);
   }
 
   @Get('stats/:name')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   getStats(@Param('name') name: string) {
     return this.campaignsService.getStats(name);
   }
 
   @Delete(':id')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   remove(@Param('id') id: string) {
     return this.campaignsService.remove(+id);
   }

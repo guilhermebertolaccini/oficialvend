@@ -12,11 +12,11 @@ import { Role } from '@prisma/client';
 @Controller('control-panel')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ControlPanelController {
-  constructor(private readonly controlPanelService: ControlPanelService) {}
+  constructor(private readonly controlPanelService: ControlPanelService) { }
 
   // Buscar configurações (global ou por segmento)
   @Get()
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   async findOne(@Query('segmentId') segmentId?: string) {
     const segId = segmentId ? parseInt(segmentId, 10) : undefined;
     return this.controlPanelService.findOne(segId);
@@ -24,14 +24,14 @@ export class ControlPanelController {
 
   // Atualizar configurações
   @Post()
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   async upsert(@Body() dto: UpdateControlPanelDto) {
     return this.controlPanelService.upsert(dto);
   }
 
   // Adicionar frase de bloqueio
   @Post('block-phrases')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   async addBlockPhrase(
     @Body() dto: AddBlockPhraseDto,
     @Query('segmentId') segmentId?: string,
@@ -42,7 +42,7 @@ export class ControlPanelController {
 
   // Remover frase de bloqueio
   @Delete('block-phrases')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   async removeBlockPhrase(
     @Body() dto: RemoveBlockPhraseDto,
     @Query('segmentId') segmentId?: string,
@@ -53,7 +53,7 @@ export class ControlPanelController {
 
   // Verificar se pode contatar CPC
   @Get('check-cpc/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   async checkCPC(
     @Param('phone') phone: string,
     @Query('segmentId') segmentId?: string,
@@ -64,7 +64,7 @@ export class ControlPanelController {
 
   // Verificar se pode reenviar
   @Get('check-resend/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   async checkResend(
     @Param('phone') phone: string,
     @Query('segmentId') segmentId?: string,
@@ -75,7 +75,7 @@ export class ControlPanelController {
 
   // Marcar contato como CPC
   @Post('mark-cpc/:phone')
-  @Roles(Role.admin, Role.supervisor, Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator, Role.digital)
   async markAsCPC(
     @Param('phone') phone: string,
     @Body() body: { isCPC: boolean },
@@ -86,14 +86,14 @@ export class ControlPanelController {
 
   // Atribuição em massa de linhas aos operadores
   @Post('assign-lines-mass')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   async assignLinesMass() {
     return this.controlPanelService.assignLinesToAllOperators();
   }
 
   // Desatribuir todas as linhas dos operadores e alterar todas as linhas para segmento "Padrão"
   @Post('unassign-all-lines')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   async unassignAllLines() {
     return this.controlPanelService.unassignAllLines();
   }

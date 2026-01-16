@@ -10,10 +10,10 @@ import { Role } from '@prisma/client';
 @Controller('blocklist')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BlocklistController {
-  constructor(private readonly blocklistService: BlocklistService) {}
+  constructor(private readonly blocklistService: BlocklistService) { }
 
   @Post()
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   create(@Body() createBlocklistDto: CreateBlocklistDto) {
     return this.blocklistService.create(createBlocklistDto);
   }
@@ -35,13 +35,13 @@ export class BlocklistController {
   }
 
   @Patch(':id')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   update(@Param('id') id: string, @Body() updateBlocklistDto: UpdateBlocklistDto) {
     return this.blocklistService.update(+id, updateBlocklistDto);
   }
 
   @Delete(':id')
-  @Roles(Role.admin, Role.supervisor)
+  @Roles(Role.admin, Role.supervisor, Role.digital)
   remove(@Param('id') id: string) {
     return this.blocklistService.remove(+id);
   }
