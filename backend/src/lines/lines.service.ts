@@ -455,7 +455,7 @@ export class LinesService {
       return null;
     }
 
-    // Buscar todos operadores online do segmento (não apenas vinculados à linha)
+    // Buscar todos operadores online do segmento (será usado se não houver conversa existente)
     const segmentOperators = await (this.prisma as any).user.findMany({
       where: {
         role: 'operator',
@@ -464,18 +464,15 @@ export class LinesService {
       },
     });
 
-    if (segmentOperators.length === 0) {
-      console.log(`⚠️ [LinesService] Nenhum operador online no segmento ${line.segment}`);
-      return null;
-    }
-
-    // Verificar se já existe conversa ativa com algum operador
+    // 1. PRIMEIRO: Verificar se já existe conversa ativa com QUALQUER operador (não só online)
+    // Isso é crucial para o fluxo 1x1 - o operador envia template, depois pode sair offline, 
+    // mas quando o cliente responder, precisa ir para o mesmo operador
     const existingConversation = await (this.prisma as any).conversation.findFirst({
       where: {
         contactPhone,
         userLine: lineId,
         tabulation: null,
-        userId: { in: segmentOperators.map(op => op.id) },
+        userId: { not: null }, // Qualquer operador atribuído
       },
       orderBy: {
         datetime: 'desc',
@@ -501,10 +498,16 @@ export class LinesService {
       },
     });
 
-    // Se já existe conversa ativa, manter com o mesmo operador
+    // Se já existe conversa ativa com um operador, manter com ele (mesmo se offline)
     if (existingConversation?.userId) {
       console.log(`✅ [LinesService] Mantendo conversa com operador existente: ${existingConversation.userId}`);
       return existingConversation.userId;
+    }
+
+    // 2. Se não tem operador online no segmento, retornar null (vai para fila)
+    if (segmentOperators.length === 0) {
+      console.log(`⚠️ [LinesService] Nenhum operador online no segmento ${line.segment} e sem conversa existente`);
+      return null;
     }
 
     // Calcular prioridade de cada operador
