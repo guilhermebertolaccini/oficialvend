@@ -13,7 +13,7 @@ export class TemplatesService {
     private prisma: PrismaService,
     private whatsappCloudService: WhatsappCloudService,
     private phoneValidationService: PhoneValidationService,
-  ) {}
+  ) { }
 
   async create(createTemplateDto: CreateTemplateDto) {
     // Validar campos obrigatórios
@@ -311,7 +311,7 @@ export class TemplatesService {
       };
     } catch (error) {
       console.error('Erro ao sincronizar template:', error.response?.data || error.message);
-      
+
       await this.prisma.template.update({
         where: { id },
         data: { status: 'REJECTED' },
@@ -363,7 +363,7 @@ export class TemplatesService {
         throw new BadRequestException('Linha não está ativa');
       }
     }
-    
+
     const line = await this.prisma.linesStock.findUnique({
       where: { id: lineId },
     });
@@ -409,7 +409,7 @@ export class TemplatesService {
       },
     });
 
-    // Criar conversa se enviado com sucesso
+    // Criar ou atualizar conversa se enviado com sucesso
     if (result.success) {
       // Substituir variáveis no texto
       let messageText = template.bodyText;
@@ -431,38 +431,45 @@ export class TemplatesService {
         });
       }
 
-      await this.prisma.conversation.create({
-        data: {
-          contactName: dto.contactName || contact?.name || 'Contato',
+      // Verificar se já existe conversa ATIVA (não tabulada) com este contato e linha
+      const existingConversation = await this.prisma.conversation.findFirst({
+        where: {
           contactPhone: normalizedPhone,
-          segment: contact?.segment || line.segment || operator?.segment || null,
-          userName: operator?.name || null,
           userLine: lineId,
-          userId: operator?.id || null, // IMPORTANTE: userId é necessário para filtrar conversas do operador
-          message: `template: ${messageText}`,
-          sender: 'operator',
-          messageType: 'template',
+          tabulation: null,
         },
-        select: {
-          id: true,
-          contactName: true,
-          contactPhone: true,
-          segment: true,
-          userName: true,
-          userLine: true,
-          userId: true,
-          message: true,
-          sender: true,
-          datetime: true,
-          tabulation: true,
-          messageType: true,
-          mediaUrl: true,
-          archived: true,
-          archivedAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        orderBy: { datetime: 'desc' },
       });
+
+      if (existingConversation) {
+        // Atualizar conversa existente
+        await this.prisma.conversation.update({
+          where: { id: existingConversation.id },
+          data: {
+            message: `template: ${messageText}`,
+            sender: 'operator',
+            messageType: 'template',
+            userId: operator?.id || existingConversation.userId, // Atualizar operador se necessário
+            userName: operator?.name || existingConversation.userName,
+            datetime: new Date(), // Atualizar timestamp
+          },
+        });
+      } else {
+        // Criar nova conversa (se não existe ou se a última foi tabulada)
+        await this.prisma.conversation.create({
+          data: {
+            contactName: dto.contactName || contact?.name || 'Contato',
+            contactPhone: normalizedPhone,
+            segment: contact?.segment || line.segment || operator?.segment || null,
+            userName: operator?.name || null,
+            userLine: lineId,
+            userId: operator?.id || null, // IMPORTANTE: userId é necessário para filtrar conversas do operador
+            message: `template: ${messageText}`,
+            sender: 'operator',
+            messageType: 'template',
+          },
+        });
+      }
     }
 
     return {
@@ -716,15 +723,15 @@ export class TemplatesService {
     // Linhas CSV
     const rows = templates.map(template => {
       const segmentName = template.segmentId ? segmentMap.get(template.segmentId) || `Segmento ${template.segmentId}` : 'Global';
-      
+
       // Parsear botões e variáveis para exibição
       let buttonsStr = '';
       let variablesStr = '';
-      
+
       try {
         if (template.buttons) {
           const buttons = JSON.parse(template.buttons);
-          buttonsStr = Array.isArray(buttons) 
+          buttonsStr = Array.isArray(buttons)
             ? buttons.map((b: any) => `${b.type}:${b.text || b.url || ''}`).join('; ')
             : template.buttons;
         }
@@ -735,7 +742,7 @@ export class TemplatesService {
       try {
         if (template.variables) {
           const variables = JSON.parse(template.variables);
-          variablesStr = Array.isArray(variables) 
+          variablesStr = Array.isArray(variables)
             ? variables.join(', ')
             : template.variables;
         }
@@ -764,7 +771,7 @@ export class TemplatesService {
 
     // Combinar cabeçalho e linhas
     const csvLines = [headers.join(','), ...rows.map(row => row.join(','))];
-    
+
     return csvLines.join('\n');
   }
 
@@ -773,13 +780,13 @@ export class TemplatesService {
    */
   private escapeCsvField(field: string): string {
     if (!field) return '';
-    
+
     // Se contém vírgula, quebra de linha ou aspas, precisa ser envolvido em aspas
     if (field.includes(',') || field.includes('\n') || field.includes('"')) {
       // Escapar aspas duplas duplicando-as
       return `"${field.replace(/"/g, '""')}"`;
     }
-    
+
     return field;
   }
 }

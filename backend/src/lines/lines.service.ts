@@ -467,9 +467,20 @@ export class LinesService {
     // 1. PRIMEIRO: Verificar se já existe conversa ativa com QUALQUER operador (não só online)
     // Isso é crucial para o fluxo 1x1 - o operador envia template, depois pode sair offline, 
     // mas quando o cliente responder, precisa ir para o mesmo operador
+    console.log(`🔍 [LinesService] Procurando conversa existente para ${contactPhone} na linha ${lineId}`);
+
+    // Tentar normalizar o telefone para garantir match (caso venha diferente do webhook)
+    const phoneVariants = [contactPhone];
+    if (contactPhone.startsWith('55') && contactPhone.length > 11) {
+      phoneVariants.push(contactPhone.substring(2)); // Sem 55
+    } else if (!contactPhone.startsWith('55')) {
+      phoneVariants.push(`55${contactPhone}`); // Com 55
+    }
+    console.log(`🔍 [LinesService] Variantes de telefone: ${phoneVariants.join(', ')}`);
+
     const existingConversation = await (this.prisma as any).conversation.findFirst({
       where: {
-        contactPhone,
+        contactPhone: { in: phoneVariants },
         userLine: lineId,
         tabulation: null,
         userId: { not: null }, // Qualquer operador atribuído

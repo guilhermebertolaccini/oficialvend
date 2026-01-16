@@ -1174,18 +1174,28 @@ export default function Atendimento() {
       closeNewConversationModal();
 
       // Aguardar um pouco e selecionar a nova conversa
+      // Aguardar um pouco e selecionar a nova conversa
       setTimeout(async () => {
         await loadConversations();
         const updated = await conversationsService.getActive();
-        const newConv = updated.find(c => c.contactPhone === newContactPhone.trim());
+
+        // Encontrar a conversa correta usando telefone E linha
+        const targetLineId = parseInt(selectedLineId);
+        const newConv = updated.find(c =>
+          c.contactPhone === newContactPhone.trim() &&
+          c.userLine === targetLineId
+        );
+
         if (newConv) {
-          const grouped = {
+          const grouped: ConversationGroup = {
             contactPhone: newConv.contactPhone,
             contactName: newConv.contactName,
+            userLine: newConv.userLine,
             lastMessage: newConv.message,
             lastMessageTime: newConv.datetime,
             isFromContact: newConv.sender === 'contact',
             messages: [newConv],
+            unread: false,
           };
           setSelectedConversation(grouped);
         }
@@ -1945,7 +1955,7 @@ export default function Atendimento() {
                                 Template
                               </div>
                             )}
-                            <p className="text-sm">{msg.message}</p>
+                            <p className="text-sm">{msg.message.replace(/^template:\s*/i, '')}</p>
                           </div>
                         )}
                         <p className={cn(
