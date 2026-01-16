@@ -178,7 +178,7 @@ export class ConversationsController {
   }
 
   @Post('tabulate/:phone')
-  @Roles(Role.operator)
+  @Roles(Role.admin, Role.supervisor, Role.operator)
   tabulate(
     @Param('phone') phone: string,
     @Body() tabulateDto: TabulateConversationDto,

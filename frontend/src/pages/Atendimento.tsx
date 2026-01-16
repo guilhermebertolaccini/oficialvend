@@ -277,9 +277,21 @@ export default function Atendimento() {
   // Subscribe to message errors (bloqueios CPC, repescagem, etc)
   useRealtimeSubscription('message-error', (data: any) => {
     console.log('[Atendimento] Message error received:', data);
-    if (data?.error) {
-      playErrorSound();
+    playErrorSound();
 
+    // Novo formato: data.type e data.message (para erros como 24h)
+    if (data?.type === '24h_window_expired') {
+      toast({
+        title: "Janela de 24h expirada",
+        description: data.message || "Use um template para reativar a conversa.",
+        variant: "destructive",
+        duration: 10000,
+      });
+      return;
+    }
+
+    // Formato antigo: data.error como string
+    if (data?.error) {
       // Determinar título baseado no tipo de erro
       let title = "Mensagem bloqueada";
       if (data.error.includes('CPC')) {

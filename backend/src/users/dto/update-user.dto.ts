@@ -59,4 +59,12 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   oneToOneActive?: boolean; // Se true, operador pode chamar clientes no 1x1
+
+  @Transform(({ value }) => {
+    if (value === null || value === undefined) return undefined;
+    return Boolean(value);
+  })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean; // Se false, usuário está desativado
 }

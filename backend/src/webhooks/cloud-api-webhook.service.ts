@@ -401,6 +401,31 @@ export class CloudApiWebhookService {
       // Emitir evento via WebSocket se necessário
       if (statusValue === 'failed' && status.errors) {
         this.logger.warn(`Mensagem ${messageId} falhou: ${JSON.stringify(status.errors)}`);
+
+        // Verificar se é erro de janela de 24h expirada (código 131047)
+        const is24hError = status.errors.some((e: any) => e.code === 131047);
+
+        if (is24hError && status.recipient_id) {
+          // Buscar conversa para obter o operador
+          const conversation = await this.prisma.conversation.findFirst({
+            where: {
+              contactPhone: status.recipient_id,
+              tabulation: null,
+            },
+            orderBy: { datetime: 'desc' },
+          });
+
+          if (conversation?.userId) {
+            // Notificar operador sobre o erro de 24h
+            this.websocketGateway.emitToUser(conversation.userId, 'message-error', {
+              type: '24h_window_expired',
+              contactPhone: status.recipient_id,
+              message: 'A janela de 24h para enviar mensagens livres expirou. Use um template para reativar a conversa.',
+              errorDetails: status.errors,
+            });
+            this.logger.log(`📨 Notificando operador ${conversation.userId} sobre erro de 24h para ${status.recipient_id}`);
+          }
+        }
       }
 
       return { status: 'success' };
