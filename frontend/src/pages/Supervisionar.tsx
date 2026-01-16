@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MessageCircle, ArrowRight, ArrowLeft, AlertTriangle, Loader2, FileText } from "lucide-react";
+import { MessageCircle, ArrowRight, ArrowLeft, AlertTriangle, Loader2, FileText, ArrowRightLeft, Download } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,9 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { conversationsService, usersService, Conversation as APIConversation, User } from "@/services/api";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 
 interface ConversationGroup {
@@ -25,12 +28,20 @@ interface ConversationGroup {
   messages: APIConversation[];
 }
 
+
 export default function Supervisionar() {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   const [conversations, setConversations] = useState<ConversationGroup[]>([]);
   const [operators, setOperators] = useState<User[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationGroup | null>(null);
   const [selectedOperator, setSelectedOperator] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+
+  // States for Transfer
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [availableOperators, setAvailableOperators] = useState<User[]>([]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string>("");
+  const [isLoadingOperators, setIsLoadingOperators] = useState(false);
 
   const loadOperators = useCallback(async () => {
     try {
@@ -56,12 +67,12 @@ export default function Supervisionar() {
       if (isFirstLoad.current) {
         setIsLoading(true);
       }
-      
+
       const data = await conversationsService.getActive();
-      
+
       // Group conversations by contact phone
       const groupedMap = new Map<string, ConversationGroup>();
-      
+
       data.forEach((conv) => {
         const existing = groupedMap.get(conv.contactPhone);
         if (existing) {
@@ -91,15 +102,15 @@ export default function Supervisionar() {
       // Sort messages within each group and groups by last message time
       const groups = Array.from(groupedMap.values()).map(group => ({
         ...group,
-        messages: group.messages.sort((a, b) => 
+        messages: group.messages.sort((a, b) =>
           new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
         ),
-      })).sort((a, b) => 
+      })).sort((a, b) =>
         new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
       );
 
       setConversations(groups);
-      
+
       // Update selected conversation if it exists (usando ref)
       const currentSelectedPhone = selectedPhoneRef.current;
       if (currentSelectedPhone) {
@@ -137,9 +148,9 @@ export default function Supervisionar() {
   const filteredConversations = selectedOperator === "all"
     ? conversations
     : conversations.filter(c => {
-        const operator = operators.find(o => o.id.toString() === selectedOperator);
-        return operator && c.operatorName === operator.name;
-      });
+      const operator = operators.find(o => o.id.toString() === selectedOperator);
+      return operator && c.operatorName === operator.name;
+    });
 
   const formatTime = (datetime: string) => {
     try {
@@ -148,6 +159,177 @@ export default function Supervisionar() {
       return '';
     }
   };
+
+  const handleDownloadPDF = useCallback(() => {
+    if (!selectedConversation) return;
+
+    // Criar HTML formatado para a conversa
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Conversa - ${selectedConversation.contactName}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .header {
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .header p {
+      margin: 5px 0;
+      color: #666;
+    }
+    .message {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .message.operator {
+      background-color: #e3f2fd;
+      margin-left: 20%;
+      text-align: right;
+    }
+    .message.contact {
+      background-color: #f5f5f5;
+      margin-right: 20%;
+    }
+    .message-header {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+    .message-content {
+      margin-bottom: 5px;
+    }
+    .message-time {
+      font-size: 11px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${selectedConversation.contactName}</h1>
+    <p>Telefone: ${selectedConversation.contactPhone}</p>
+    <p>Data: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+  </div>
+  ${selectedConversation.messages.map(msg => `
+    <div class="message ${msg.sender === 'operator' ? 'operator' : 'contact'}">
+      <div class="message-header">${msg.sender === 'operator' ? (msg.userName || 'Operador') : selectedConversation.contactName}</div>
+      <div class="message-content">${msg.message || (msg.mediaUrl ? `[${msg.messageType}]` : '')}</div>
+      <div class="message-time">${format(new Date(msg.datetime), 'dd/MM/yyyy HH:mm:ss')}</div>
+    </div>
+  `).join('')}
+</body>
+</html>
+    `;
+
+    // Criar blob e abrir em nova janela para impressão
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+
+    if (printWindow) {
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          URL.revokeObjectURL(url);
+        }, 250);
+      };
+    }
+
+    toast({
+      title: "Download iniciado",
+      description: "Use a opção 'Salvar como PDF' na janela de impressão",
+    });
+  }, [selectedConversation]);
+
+  // Carregar operadores quando o dialog de transferência abrir
+  useEffect(() => {
+    if (isTransferDialogOpen && selectedConversation) {
+      const loadTransferOperators = async () => {
+        setIsLoadingOperators(true);
+        try {
+          // Buscar operadores online (mesma lógica do atendimento)
+          const operatorsList = await usersService.getOnlineOperators();
+          // Remover operador atual da conversa se houver
+          // Mas como é supervisão, mostramos todos exceto talvez o atual da conversa
+          // Para simplificar, mostramos todos os online disponíveis
+          setAvailableOperators(operatorsList);
+        } catch (error) {
+          console.error('Erro ao carregar operadores:', error);
+          toast({
+            title: "Erro ao carregar operadores",
+            description: "Não foi possível carregar a lista de operadores",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingOperators(false);
+        }
+      };
+      loadTransferOperators();
+    }
+  }, [isTransferDialogOpen, selectedConversation]);
+
+  const handleTransfer = useCallback(async () => {
+    if (!selectedConversation || !selectedOperatorId) {
+      toast({
+        title: "Operador não selecionado",
+        description: "Selecione um operador para transferir a conversa",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Usar o ID da primeira mensagem da conversa para transferir
+      const firstMessage = selectedConversation.messages[0];
+      if (!firstMessage) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível identificar a conversa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await conversationsService.transfer(firstMessage.id, parseInt(selectedOperatorId));
+
+      toast({
+        title: "Conversa transferida",
+        description: "A conversa foi transferida com sucesso",
+      });
+
+      // Fechar dialog e limpar seleção
+      setIsTransferDialogOpen(false);
+      setSelectedOperatorId("");
+
+      // Atualizar lista
+      loadConversations();
+
+      // Limpar seleção
+      setSelectedConversation(null);
+
+    } catch (error) {
+      toast({
+        title: "Erro ao transferir",
+        description: error instanceof Error ? error.message : "Erro ao transferir conversa",
+        variant: "destructive",
+      });
+    }
+  }, [selectedConversation, selectedOperatorId, loadConversations]);
 
   return (
     <MainLayout>
@@ -249,6 +431,24 @@ export default function Supervisionar() {
                   <p className="text-xs text-muted-foreground">Atendente</p>
                   <p className="text-sm font-medium text-warning">{selectedConversation.operatorName}</p>
                 </div>
+                <div className="flex gap-2 ml-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsTransferDialogOpen(true)}
+                    title="Transferir conversa"
+                  >
+                    <ArrowRightLeft className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDownloadPDF}
+                    title="Baixar PDF"
+                  >
+                    <Download className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
               {/* Messages */}
@@ -280,7 +480,7 @@ export default function Supervisionar() {
                         {/* Renderizar mídia baseado no messageType */}
                         {msg.messageType === 'image' && msg.mediaUrl ? (
                           <div className="mb-2">
-                            <img 
+                            <img
                               src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_URL}${msg.mediaUrl}`}
                               alt="Imagem"
                               className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
@@ -293,8 +493,8 @@ export default function Supervisionar() {
                           </div>
                         ) : msg.messageType === 'audio' && msg.mediaUrl ? (
                           <div className="mb-2">
-                            <audio 
-                              controls 
+                            <audio
+                              controls
                               className="max-w-full"
                               src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_URL}${msg.mediaUrl}`}
                             >
@@ -303,8 +503,8 @@ export default function Supervisionar() {
                           </div>
                         ) : msg.messageType === 'video' && msg.mediaUrl ? (
                           <div className="mb-2">
-                            <video 
-                              controls 
+                            <video
+                              controls
                               className="max-w-full rounded-lg"
                               style={{ maxHeight: '300px' }}
                               src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_URL}${msg.mediaUrl}`}
@@ -317,7 +517,7 @@ export default function Supervisionar() {
                           </div>
                         ) : msg.messageType === 'document' && msg.mediaUrl ? (
                           <div className="mb-2">
-                            <a 
+                            <a
                               href={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_URL}${msg.mediaUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -364,6 +564,51 @@ export default function Supervisionar() {
           )}
         </GlassCard>
       </div>
+      <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transferir Conversa</DialogTitle>
+            <DialogDescription>
+              Selecione um operador para transferir esta conversa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="operator">Operador</Label>
+              <Select
+                value={selectedOperatorId}
+                onValueChange={setSelectedOperatorId}
+                disabled={isLoadingOperators}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingOperators ? "Carregando..." : "Selecione um operador"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableOperators.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      Nenhum operador online disponível
+                    </div>
+                  ) : (
+                    availableOperators.map((op) => (
+                      <SelectItem key={op.id} value={op.id.toString()}>
+                        {op.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleTransfer} disabled={!selectedOperatorId}>
+              Transferir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
