@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Upload, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, CheckCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { GlassCard } from "@/components/ui/glass-card";
 import { CrudTable, Column } from "@/components/crud/CrudTable";
@@ -23,11 +23,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { 
-  campaignsService, 
-  segmentsService, 
+import {
+  campaignsService,
+  segmentsService,
   templatesService,
-  Campaign as APICampaign, 
+  Campaign as APICampaign,
   CampaignStats,
   Segment,
   Template as APITemplate
@@ -102,7 +102,7 @@ export default function Campanhas() {
     try {
       setIsLoading(true);
       const data = await campaignsService.list();
-      
+
       // Group by campaign name and get unique campaigns
       const uniqueCampaigns = new Map<string, APICampaign>();
       data.forEach(c => {
@@ -110,7 +110,7 @@ export default function Campanhas() {
           uniqueCampaigns.set(c.name, c);
         }
       });
-      
+
       setCampaigns(Array.from(uniqueCampaigns.values()).map(mapApiToLocal));
     } catch (error) {
       toast({
@@ -169,7 +169,7 @@ export default function Campanhas() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.segment) {
       toast({
         title: "Campos obrigatórios",
@@ -214,13 +214,13 @@ export default function Campanhas() {
         }
 
         const uploadResult = await campaignsService.uploadCSV(
-          campaign.id, 
-          csvFile, 
+          campaign.id,
+          csvFile,
           undefined, // Não enviar mensagem livre, apenas template
           'true', // useTemplate
           formData.templateId
         );
-        
+
         setResultData({
           total: uploadResult.contactsAdded,
           sent: uploadResult.contactsAdded,
@@ -235,7 +235,7 @@ export default function Campanhas() {
         title: "Campanha criada",
         description: "Campanha criada com sucesso",
       });
-      
+
       // Reset form
       setFormData({
         name: '',
@@ -248,10 +248,10 @@ export default function Campanhas() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
+
       // Reload campaigns
       await loadCampaigns();
-      
+
       setTimeout(() => setShowResult(false), 5000);
     } catch (error) {
       toast({
@@ -269,7 +269,7 @@ export default function Campanhas() {
     setIsStatsOpen(true);
     setIsLoadingStats(true);
     setCampaignStats(null);
-    
+
     try {
       const stats = await campaignsService.getStats(campaign.name);
       setCampaignStats(stats);
@@ -289,6 +289,31 @@ export default function Campanhas() {
     if (file) {
       setCsvFile(file);
     }
+  };
+
+  const handleDownloadTemplate = () => {
+    // Cabeçalhos do CSV
+    const headers = ['name', 'phone', 'cpf', 'contract'];
+
+    // Exemplo de linha (opcional)
+    const exampleRow = ['Nome do Cliente', '5511999999999', '000.000.000-00', '123456'];
+
+    // Conteúdo do CSV
+    const csvContent = [
+      headers.join(','),
+      exampleRow.join(',')
+    ].join('\n');
+
+    // Criar blob e link para download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'modelo_campanha.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -374,14 +399,23 @@ export default function Campanhas() {
             <div className="space-y-2">
               <Label htmlFor="csv">Arquivo CSV</Label>
               <div className="flex items-center gap-4">
-                <Input 
-                  id="csv" 
-                  type="file" 
-                  accept=".csv" 
+                <Input
+                  id="csv"
+                  type="file"
+                  accept=".csv"
                   className="max-w-xs"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadTemplate}
+                  title="Baixar modelo de CSV"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Baixar Modelo
+                </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
