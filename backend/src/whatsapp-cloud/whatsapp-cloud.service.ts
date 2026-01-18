@@ -69,7 +69,7 @@ export interface SendMessageResponse {
 @Injectable()
 export class WhatsappCloudService {
   private readonly logger = new Logger(WhatsappCloudService.name);
-  private readonly apiVersion = 'v21.0';
+  private readonly apiVersion = 'v24.0';
   private readonly baseUrl = 'https://graph.facebook.com';
 
   /**
