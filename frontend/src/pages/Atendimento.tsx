@@ -1152,17 +1152,9 @@ export default function Atendimento() {
 
         // Remove duplicates based on KEY
         const uniqueVars = Array.from(new Map(allVars.map(v => [v.key, v])).values());
-        setDetectedVariables(uniqueVars.map(v => v.key));
-        // Note: checking setDetectedVariables type... it was string[].
-        // I should stick to string[] for detectedVariables to minimize changes, 
-        // but finding a way to show user nice labels would be better.
-        // For now, I'll detecting them and adding them to the list means they will appear in the UI input loop.
-        // The input label uses the key. "header_1" might look ugly but works. 
-        // Better: I will stick to string[] but just make sure the keys are correct for backend.
-
-        // Let's refine the UI rendering loop later if needed, for now getting it to work is priority.
-        setDetectedVariables(uniqueVars.map(v => v.key));
-
+        const varKeys = uniqueVars.map(v => v.key);
+        console.log('🔍 [Atendimento] Setting detectedVariables:', varKeys);
+        setDetectedVariables(varKeys);
         setTemplateVariableValues({});
       } else {
         setDetectedVariables([]);
@@ -1173,6 +1165,8 @@ export default function Atendimento() {
   }, [newContactTemplateId, templates]);
 
   const handleNewConversation = useCallback(async () => {
+    console.log('🔍 [Atendimento] handleNewConversation - detectedVariables:', detectedVariables);
+    console.log('🔍 [Atendimento] handleNewConversation - templateVariableValues:', templateVariableValues);
     if (!newContactName.trim() || !newContactPhone.trim()) {
       toast({
         title: "Campos obrigatórios",
