@@ -1226,8 +1226,18 @@ export default function Atendimento() {
         .map(key => ({
           key,
           value: templateVariableValues[key] || ''
-        }))
-        .filter(v => v.value.trim() !== ''); // Remove empty values
+        }));
+
+      // Validate that all detected variables have values
+      const emptyVars = variables.filter(v => v.value.trim() === '');
+      if (emptyVars.length > 0) {
+        toast({
+          title: "Variáveis obrigatórias",
+          description: `Preencha todas as variáveis do template: ${emptyVars.map(v => v.key).join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Enviar template imediatamente
       await templatesService.send({
