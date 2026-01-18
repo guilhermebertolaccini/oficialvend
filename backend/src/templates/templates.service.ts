@@ -525,8 +525,8 @@ export class TemplatesService {
         components.push({
           type: 'body',
           parameters: bodyVars.map(v => ({
-            type: 'text',
-            text: v.value,
+            type: 'number',
+            text: String(v.value),
           })),
         });
       }
