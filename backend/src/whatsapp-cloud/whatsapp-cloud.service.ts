@@ -78,7 +78,7 @@ export class WhatsappCloudService {
   async sendTextMessage(options: SendTextMessageOptions): Promise<SendMessageResponse> {
     try {
       const cleanPhone = this.cleanPhoneNumber(options.to);
-      
+
       const payload: any = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
@@ -96,7 +96,7 @@ export class WhatsappCloudService {
           message_id: options.replyTo,
         };
       }
-      
+
       const response = await axios.post<SendMessageResponse>(
         `${this.baseUrl}/${this.apiVersion}/${options.phoneNumberId}/messages`,
         payload,
@@ -142,6 +142,8 @@ export class WhatsappCloudService {
         payload.template.components = options.components;
       }
 
+      console.log('📤 [WhatsApp API] Payload completo:', JSON.stringify(payload, null, 2));
+
       const response = await axios.post<SendMessageResponse>(
         `${this.baseUrl}/${this.apiVersion}/${options.phoneNumberId}/messages`,
         payload,
@@ -171,7 +173,7 @@ export class WhatsappCloudService {
       // Validação de tamanho de arquivo antes de upload
       const stats = fs.statSync(options.mediaPath);
       const fileSizeInMB = stats.size / (1024 * 1024);
-      
+
       // Limites do WhatsApp Cloud API (em MB)
       const maxSizes: Record<string, number> = {
         image: 5,
@@ -179,7 +181,7 @@ export class WhatsappCloudService {
         audio: 16,
         document: 100,
       };
-      
+
       const maxSize = maxSizes[options.mediaType] || 16;
       if (fileSizeInMB > maxSize) {
         throw new BadRequestException(
@@ -188,7 +190,7 @@ export class WhatsappCloudService {
       }
 
       const formData = new FormData();
-      
+
       // Ler arquivo do sistema de arquivos
       const fileStream = fs.createReadStream(options.mediaPath);
       const filename = options.mediaPath.split('/').pop() || 'file';
@@ -347,7 +349,7 @@ export class WhatsappCloudService {
         .createHmac('sha256', appSecret)
         .update(payload)
         .digest('hex');
-      
+
       const expectedSignature = `sha256=${hash}`;
       return crypto.timingSafeEqual(
         Buffer.from(signature),
