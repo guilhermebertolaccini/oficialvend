@@ -1291,7 +1291,7 @@ export default function Atendimento() {
         variant: "destructive",
       });
     }
-  }, [newContactName, newContactPhone, newContactCpf, newContactContract, newContactTemplateId, selectedLineId, user, playSuccessSound, playErrorSound, loadConversations]);
+  }, [newContactName, newContactPhone, newContactCpf, newContactContract, newContactTemplateId, selectedLineId, user, playSuccessSound, playErrorSound, loadConversations, detectedVariables, templateVariableValues, closeNewConversationModal, toast]);
 
   const formatTime = (datetime: string) => {
     try {
