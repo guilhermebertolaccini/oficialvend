@@ -1111,20 +1111,58 @@ export default function Atendimento() {
   useEffect(() => {
     if (newContactTemplateId) {
       const template = templates.find(t => t.id === newContactTemplateId);
-      if (template && template.bodyText) {
-        // Regex to find {{1}}, {{name}}, etc.
-        const matches = template.bodyText.match(/{{\s*[\w\d]+\s*}}/g);
-        if (matches) {
-          const vars = matches.map((m: string) => m.replace(/[{}]/g, '').trim());
-          // Unique variables
-          const uniqueVars: string[] = [...new Set(vars)];
-          setDetectedVariables(uniqueVars);
+      if (template) {
+        let allVars: { key: string; label: string; isHeader: boolean }[] = [];
 
-          // Clear values when template changes
-          setTemplateVariableValues({});
-        } else {
-          setDetectedVariables([]);
+        // 1. Detect Header Variables
+        if (template.headerType === 'TEXT' && template.headerContent) {
+          const headerMatches = template.headerContent.match(/{{\s*[\w\d]+\s*}}/g);
+          if (headerMatches) {
+            headerMatches.forEach((m: string) => {
+              const varName = m.replace(/[{}]/g, '').trim();
+              // Backend expects keys starting with 'header' to place them in header component
+              allVars.push({
+                key: `header_${varName}`,
+                label: `Cabeçalho: ${varName}`,
+                isHeader: true
+              });
+            });
+          }
         }
+
+        // 2. Detect Body Variables
+        if (template.bodyText) {
+          const bodyMatches = template.bodyText.match(/{{\s*[\w\d]+\s*}}/g);
+          if (bodyMatches) {
+            bodyMatches.forEach((m: string) => {
+              const varName = m.replace(/[{}]/g, '').trim();
+              // Body variables don't need prefix, but we must ensure they don't start with 'header' or 'button' unintentionally
+              // Usually they are numbers just like '1'
+              allVars.push({
+                key: varName,
+                label: `Corpo: ${varName}`,
+                isHeader: false
+              });
+            });
+          }
+        }
+
+        // Remove duplicates based on KEY
+        const uniqueVars = Array.from(new Map(allVars.map(v => [v.key, v])).values());
+        setDetectedVariables(uniqueVars.map(v => v.key));
+        // Note: checking setDetectedVariables type... it was string[].
+        // I should stick to string[] for detectedVariables to minimize changes, 
+        // but finding a way to show user nice labels would be better.
+        // For now, I'll detecting them and adding them to the list means they will appear in the UI input loop.
+        // The input label uses the key. "header_1" might look ugly but works. 
+        // Better: I will stick to string[] but just make sure the keys are correct for backend.
+
+        // Let's refine the UI rendering loop later if needed, for now getting it to work is priority.
+        setDetectedVariables(uniqueVars.map(v => v.key));
+
+        setTemplateVariableValues({});
+      } else {
+        setDetectedVariables([]);
       }
     } else {
       setDetectedVariables([]);
