@@ -1222,10 +1222,12 @@ export default function Atendimento() {
       }
 
       // Map variable values to format expected by backend
-      const variables = detectedVariables.map(key => ({
-        key,
-        value: templateVariableValues[key] || ''
-      }));
+      const variables = detectedVariables
+        .map(key => ({
+          key,
+          value: templateVariableValues[key] || ''
+        }))
+        .filter(v => v.value.trim() !== ''); // Remove empty values
 
       // Enviar template imediatamente
       await templatesService.send({
