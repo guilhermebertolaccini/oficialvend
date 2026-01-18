@@ -508,8 +508,19 @@ export class TemplatesService {
         }
       }
 
-      // Body com variáveis
-      const bodyVars = variables.filter(v => !v.key.startsWith('header') && !v.key.startsWith('button'));
+      // Body com variáveis - IMPORTANTE: ordenar por chave numérica
+      const bodyVars = variables
+        .filter(v => !v.key.startsWith('header') && !v.key.startsWith('button'))
+        .sort((a, b) => {
+          // Sort numerically if keys are numbers
+          const aNum = parseInt(a.key.replace(/\D/g, '') || '0');
+          const bNum = parseInt(b.key.replace(/\D/g, '') || '0');
+          return aNum - bNum;
+        });
+
+      console.log('📤 [Templates] Variables recebidas:', JSON.stringify(variables));
+      console.log('📤 [Templates] Body vars ordenadas:', JSON.stringify(bodyVars));
+
       if (bodyVars.length > 0) {
         components.push({
           type: 'body',
@@ -519,6 +530,8 @@ export class TemplatesService {
           })),
         });
       }
+
+      console.log('📤 [Templates] Components a enviar:', JSON.stringify(components, null, 2));
 
       // Buttons com variáveis
       const buttonVars = variables.filter(v => v.key.startsWith('button'));
