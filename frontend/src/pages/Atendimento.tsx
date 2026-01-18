@@ -1110,7 +1110,7 @@ export default function Atendimento() {
   // Detect variables when template changes
   useEffect(() => {
     if (newContactTemplateId) {
-      const template = templates.find(t => t.id === newContactTemplateId);
+      const template = templates.find(t => t.id === parseInt(newContactTemplateId));
       if (template) {
         let allVars: { key: string; label: string; isHeader: boolean }[] = [];
 
