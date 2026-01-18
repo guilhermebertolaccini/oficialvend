@@ -1109,8 +1109,11 @@ export default function Atendimento() {
 
   // Detect variables when template changes
   useEffect(() => {
+    console.log('🔍 [Atendimento] useEffect triggered - newContactTemplateId:', newContactTemplateId);
+    console.log('🔍 [Atendimento] templates count:', templates.length);
     if (newContactTemplateId) {
       const template = templates.find(t => t.id === parseInt(newContactTemplateId));
+      console.log('🔍 [Atendimento] Found template:', template ? { id: template.id, name: template.name, bodyText: template.bodyText?.substring(0, 100) } : 'NOT FOUND');
       if (template) {
         let allVars: { key: string; label: string; isHeader: boolean }[] = [];
 
