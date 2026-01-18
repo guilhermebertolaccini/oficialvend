@@ -4,4 +4,5 @@ export interface CampaignContact {
   cpf?: string;
   contract?: string;
   segment?: number;
+  variables?: Array<{ key: string; value: string }>;
 }

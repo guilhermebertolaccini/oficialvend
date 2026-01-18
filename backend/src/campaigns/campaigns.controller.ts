@@ -53,12 +53,30 @@ export class CampaignsController {
         .on('data', (row) => {
           console.log('📝 [Campaigns] Row do CSV:', row);
           if (row.name && row.phone) {
+            // Extract variables (any column starting with 'variavel' or number)
+            const variables = [];
+            Object.keys(row).forEach(key => {
+              const cleanKey = key.trim().toLowerCase();
+              // Check for 'variavel' prefix or numeric keys (1, 2, 3...)
+              if (cleanKey.startsWith('variavel')) {
+                // Extract number/suffix from 'variavel1' -> '1'
+                const suffix = cleanKey.replace('variavel', '').trim();
+                if (suffix) {
+                  variables.push({ key: suffix, value: row[key] });
+                }
+              } else if (!isNaN(Number(cleanKey)) && cleanKey !== '') {
+                // Direct numeric keys '1', '2'
+                variables.push({ key: cleanKey, value: row[key] });
+              }
+            });
+
             contacts.push({
               name: row.name,
               phone: row.phone,
               cpf: row.cpf || undefined,
               contract: row.contrato || row.contract || undefined,
               segment: row.segment ? parseInt(row.segment) : undefined,
+              variables: variables.length > 0 ? variables : undefined
             });
           }
         })

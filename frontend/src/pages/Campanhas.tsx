@@ -293,10 +293,10 @@ export default function Campanhas() {
 
   const handleDownloadTemplate = () => {
     // Cabeçalhos do CSV
-    const headers = ['name', 'phone', 'cpf', 'contract'];
+    const headers = ['name', 'phone', 'cpf', 'contract', 'variavel1', 'variavel2'];
 
     // Exemplo de linha (opcional)
-    const exampleRow = ['Nome do Cliente', '5511999999999', '000.000.000-00', '123456'];
+    const exampleRow = ['Nome do Cliente', '5511999999999', '000.000.000-00', '123456', 'Valor Var 1', 'Valor Var 2'];
 
     // Conteúdo do CSV
     const csvContent = [
@@ -398,6 +398,20 @@ export default function Campanhas() {
 
             <div className="space-y-2">
               <Label htmlFor="csv">Arquivo CSV</Label>
+              <div className="p-4 bg-muted/30 rounded-lg border text-sm space-y-2 mb-4">
+                <p className="font-medium flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Instruções para CSV com Variáveis
+                </p>
+                <p>
+                  Para usar variáveis no template (ex: "Olá {'{{1}}'}, seu código é {'{{2}}'}"), adicione colunas no CSV chamadas <strong>variavel1</strong>, <strong>variavel2</strong>, etc.
+                </p>
+                <div className="bg-background p-2 rounded border font-mono text-xs">
+                  name,phone,variavel1,variavel2<br />
+                  João Silva,5511999999999,João,DESC10<br />
+                  Maria Souza,5511888888888,Maria,DESC20
+                </div>
+              </div>
               <div className="flex items-center gap-4">
                 <Input
                   id="csv"

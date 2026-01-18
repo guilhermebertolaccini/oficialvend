@@ -14,7 +14,7 @@ export class CampaignsService {
     private prisma: PrismaService,
     private contactsService: ContactsService,
     private usersService: UsersService,
-  ) {}
+  ) { }
 
   async create(createCampaignDto: CreateCampaignDto) {
     // Converter endTime (HH:mm) para DateTime do dia atual
@@ -38,8 +38,8 @@ export class CampaignsService {
         speed: createCampaignDto.speed,
         useTemplate: createCampaignDto.useTemplate || false,
         templateId: createCampaignDto.templateId,
-        templateVariables: createCampaignDto.templateVariables 
-          ? JSON.stringify(createCampaignDto.templateVariables) 
+        templateVariables: createCampaignDto.templateVariables
+          ? JSON.stringify(createCampaignDto.templateVariables)
           : null,
         endTime: endTimeDate,
       },
@@ -84,7 +84,7 @@ export class CampaignsService {
     // Calcular distribuição uniforme até horário limite
     const now = new Date();
     let endTime: Date;
-    
+
     if (campaign.endTime) {
       endTime = new Date(campaign.endTime);
       // Se o horário limite já passou, usar o próximo dia
@@ -107,10 +107,10 @@ export class CampaignsService {
 
     // Calcular quantas "rodadas" serão necessárias (uma rodada = todas as linhas enviam simultaneamente)
     const totalRounds = Math.ceil(contacts.length / availableLines.length);
-    
+
     // Calcular intervalo entre rodadas
-    const intervalBetweenRounds = totalRounds > 1 
-      ? timeAvailableMinutes / (totalRounds - 1) 
+    const intervalBetweenRounds = totalRounds > 1
+      ? timeAvailableMinutes / (totalRounds - 1)
       : 0; // Se só tem 1 rodada, enviar imediatamente
 
     const intervalMs = intervalBetweenRounds * 60 * 1000;
@@ -122,7 +122,7 @@ export class CampaignsService {
     // Criar contatos e agendar envios
     // Distribuir em rodadas: cada rodada envia uma mensagem por linha simultaneamente
     const contactsByRound: { contact: CampaignContact; lineId: number }[][] = [];
-    
+
     for (let i = 0; i < contacts.length; i++) {
       const contact = contacts[i];
       const lineIndex = i % availableLines.length; // Round-robin entre linhas
@@ -146,7 +146,7 @@ export class CampaignsService {
     // Processar cada rodada
     for (let roundIndex = 0; roundIndex < contactsByRound.length; roundIndex++) {
       const round = contactsByRound[roundIndex];
-      
+
       for (const { contact, lineId } of round) {
         const operator = lineToOperator.get(lineId);
         if (!operator) continue;
@@ -199,7 +199,7 @@ export class CampaignsService {
             message,
             useTemplate: finalUseTemplate,
             templateId: finalTemplateId,
-            templateVariables: campaign.templateVariables,
+            templateVariables: contact.variables || campaign.templateVariables,
           },
           {
             delay,
@@ -214,7 +214,7 @@ export class CampaignsService {
     }
 
     const estimatedCompletion = new Date(now.getTime() + (contactsByRound.length - 1) * intervalMs);
-    
+
     return {
       message: `Campanha processada com sucesso. ${contacts.length} contatos agendados para envio.`,
       totalContacts: contacts.length,
@@ -230,17 +230,17 @@ export class CampaignsService {
   async findAll(filters?: any) {
     // Remover campos inválidos que não existem no schema
     const { search, ...validFilters } = filters || {};
-    
+
     // Se houver busca por texto, aplicar filtros
-    const where = search 
+    const where = search
       ? {
-          ...validFilters,
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { contactName: { contains: search, mode: 'insensitive' } },
-            { contactPhone: { contains: search } },
-          ],
-        }
+        ...validFilters,
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { contactName: { contains: search, mode: 'insensitive' } },
+          { contactPhone: { contains: search } },
+        ],
+      }
       : validFilters;
 
     return this.prisma.campaign.findMany({
@@ -290,7 +290,7 @@ export class CampaignsService {
 
     // Buscar contatos que responderam (verificar na tabela Conversation)
     const contactPhones = campaigns.map(c => c.contactPhone);
-    const earliestCampaignTime = campaigns.length > 0 
+    const earliestCampaignTime = campaigns.length > 0
       ? new Date(Math.min(...campaigns.map(c => c.dateTime.getTime())))
       : new Date();
 

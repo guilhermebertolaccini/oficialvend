@@ -48,6 +48,7 @@ interface Template {
   namespace?: string;
   language?: string;
   variables?: string;
+  buttons?: any[];
 }
 
 const statusColors: Record<string, string> = {
@@ -87,6 +88,7 @@ export default function Templates() {
     bodyText: string;
     footer: string;
     status: 'APPROVED' | 'PENDING' | 'REJECTED';
+    buttons: any[];
   }>({
     name: '',
     segmentId: '',
@@ -97,7 +99,8 @@ export default function Templates() {
     header: '',
     bodyText: '',
     footer: '',
-    status: 'APPROVED'
+    status: 'APPROVED',
+    buttons: [] as any[]
   });
 
   const mapApiToLocal = useCallback((apiTemplate: APITemplate): Template => {
@@ -116,6 +119,7 @@ export default function Templates() {
       namespace: apiTemplate.namespace,
       language: apiTemplate.language,
       variables: apiTemplate.variables?.join(', '),
+      buttons: apiTemplate.buttons,
     };
   }, [segments]);
 
@@ -174,7 +178,7 @@ export default function Templates() {
   // Pagination calculations
   const totalItems = filteredTemplates.length;
   const totalPages = Math.ceil(totalItems / pageSize);
-  
+
   const paginatedTemplates = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredTemplates.slice(startIndex, startIndex + pageSize);
@@ -192,7 +196,7 @@ export default function Templates() {
   const pageNumbers = useMemo(() => {
     const pages: (number | 'ellipsis')[] = [];
     const maxVisible = 5;
-    
+
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
@@ -224,7 +228,8 @@ export default function Templates() {
       header: '',
       bodyText: '',
       footer: '',
-      status: 'APPROVED'
+      status: 'APPROVED',
+      buttons: []
     });
     setIsFormOpen(true);
   };
@@ -241,7 +246,8 @@ export default function Templates() {
       header: template.header || '',
       bodyText: template.body || '',
       footer: template.footer || '',
-      status: template.status
+      status: template.status,
+      buttons: template.buttons || []
     });
     setIsFormOpen(true);
   };
@@ -277,7 +283,7 @@ export default function Templates() {
       }
 
       const blob = await templatesService.downloadCsv(downloadFilters);
-      
+
       // Criar URL do blob e fazer download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -287,7 +293,7 @@ export default function Templates() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Download iniciado",
         description: "O arquivo CSV está sendo baixado",
@@ -353,6 +359,10 @@ export default function Templates() {
         payload.footerText = formData.footer.trim();
       }
 
+      if (formData.buttons && formData.buttons.length > 0) {
+        payload.buttons = formData.buttons;
+      }
+
       if (editingTemplate) {
         const updated = await templatesService.update(parseInt(editingTemplate.id), payload);
         setTemplates(templates.map(t => t.id === editingTemplate.id ? mapApiToLocal(updated) : t));
@@ -392,8 +402,8 @@ export default function Templates() {
             </div>
             <div className="flex gap-2">
               {(user?.role === 'admin' || user?.role === 'supervisor' || user?.role === 'digital') && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleDownloadCsv}
                   disabled={isDownloading}
                 >
@@ -416,7 +426,7 @@ export default function Templates() {
               </Button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -548,7 +558,7 @@ export default function Templates() {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    
+
                     {pageNumbers.map((page, index) => (
                       page === 'ellipsis' ? (
                         <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">...</span>
@@ -564,7 +574,7 @@ export default function Templates() {
                         </Button>
                       )
                     ))}
-                    
+
                     <Button
                       variant="outline"
                       size="icon"
@@ -601,8 +611,8 @@ export default function Templates() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="segment">Segmento</Label>
-                <Select 
-                  value={formData.segmentId || 'global'} 
+                <Select
+                  value={formData.segmentId || 'global'}
                   onValueChange={(value) => setFormData({ ...formData, segmentId: value === 'global' ? '' : value })}
                 >
                   <SelectTrigger>
@@ -700,8 +710,125 @@ export default function Templates() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Use {'{{1}}'}, {'{{2}}'}, etc. para variáveis que serão substituídas ao enviar
+                Use {'{{1}}'}, {'{{2}}'}, etc. para variáveis que serão substituídas ao enviar. Ex: "Olá {'{{1}}'}, tudo bem?"
               </p>
+            </div>
+
+            <div className="space-y-4 border rounded-md p-4 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label>Botões (opcional, máx 3)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (formData.buttons.length < 3) {
+                      setFormData({
+                        ...formData,
+                        buttons: [...formData.buttons, { type: 'QUICK_REPLY', text: '' }]
+                      });
+                    }
+                  }}
+                  disabled={formData.buttons.length >= 3}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Botão
+                </Button>
+              </div>
+
+              {formData.buttons.map((button, index) => (
+                <div key={index} className="grid gap-2 p-3 border rounded-md bg-background relative">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 text-destructive"
+                    onClick={() => {
+                      const newButtons = [...formData.buttons];
+                      newButtons.splice(index, 1);
+                      setFormData({ ...formData, buttons: newButtons });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tipo</Label>
+                      <Select
+                        value={button.type}
+                        onValueChange={(value) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index] = { ...button, type: value, text: button.text };
+                          // Reset fields based on type
+                          if (value === 'URL') newButtons[index].url = '';
+                          if (value === 'PHONE_NUMBER') newButtons[index].phoneNumber = '';
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QUICK_REPLY">Resposta Rápida</SelectItem>
+                          <SelectItem value="URL">Link (URL)</SelectItem>
+                          <SelectItem value="PHONE_NUMBER">Telefone</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Texto do Botão</Label>
+                      <Input
+                        value={button.text}
+                        onChange={(e) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index].text = e.target.value;
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                        className="h-8"
+                        placeholder="Ex: Sim, aceito"
+                      />
+                    </div>
+                  </div>
+
+                  {button.type === 'URL' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">URL</Label>
+                      <Input
+                        value={button.url || ''}
+                        onChange={(e) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index].url = e.target.value;
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                        className="h-8"
+                        placeholder="https://exemplo.com"
+                      />
+                    </div>
+                  )}
+
+                  {button.type === 'PHONE_NUMBER' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Telefone</Label>
+                      <Input
+                        value={button.phoneNumber || ''}
+                        onChange={(e) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index].phoneNumber = e.target.value;
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                        className="h-8"
+                        placeholder="+5511999999999"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {formData.buttons.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  Nenhum botão adicionado
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

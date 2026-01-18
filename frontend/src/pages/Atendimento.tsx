@@ -79,6 +79,8 @@ export default function Atendimento() {
   const [newContactCpf, setNewContactCpf] = useState("");
   const [newContactContract, setNewContactContract] = useState("");
   const [newContactTemplateId, setNewContactTemplateId] = useState<string>("");
+  const [templateVariableValues, setTemplateVariableValues] = useState<Record<string, string>>({});
+  const [detectedVariables, setDetectedVariables] = useState<string[]>([]);
   const [availableLines, setAvailableLines] = useState<any[]>([]);
   const [selectedLineId, setSelectedLineId] = useState<string>("");
   const [isLoadingLines, setIsLoadingLines] = useState(false);
@@ -1099,7 +1101,35 @@ export default function Atendimento() {
     setNewContactContract("");
     setNewContactTemplateId("");
     setSelectedLineId("");
+    setNewContactTemplateId("");
+    setSelectedLineId("");
+    setTemplateVariableValues({});
+    setDetectedVariables([]);
   }, []);
+
+  // Detect variables when template changes
+  useEffect(() => {
+    if (newContactTemplateId) {
+      const template = templates.find(t => t.id === newContactTemplateId);
+      if (template && template.bodyText) {
+        // Regex to find {{1}}, {{name}}, etc.
+        const matches = template.bodyText.match(/{{\s*[\w\d]+\s*}}/g);
+        if (matches) {
+          const vars = matches.map((m: string) => m.replace(/[{}]/g, '').trim());
+          // Unique variables
+          const uniqueVars: string[] = [...new Set(vars)];
+          setDetectedVariables(uniqueVars);
+
+          // Clear values when template changes
+          setTemplateVariableValues({});
+        } else {
+          setDetectedVariables([]);
+        }
+      }
+    } else {
+      setDetectedVariables([]);
+    }
+  }, [newContactTemplateId, templates]);
 
   const handleNewConversation = useCallback(async () => {
     if (!newContactName.trim() || !newContactPhone.trim()) {
@@ -1153,12 +1183,19 @@ export default function Atendimento() {
         // Contato pode já existir, ignorar erro
       }
 
+      // Map variable values to format expected by backend
+      const variables = detectedVariables.map(key => ({
+        key,
+        value: templateVariableValues[key] || ''
+      }));
+
       // Enviar template imediatamente
       await templatesService.send({
         templateId: parseInt(newContactTemplateId),
         phone: newContactPhone.trim(),
         contactName: newContactName.trim(),
         lineId: parseInt(selectedLineId),
+        variables: variables
       });
 
       playSuccessSound();
@@ -1496,7 +1533,32 @@ export default function Atendimento() {
                       <p className="text-xs text-muted-foreground">
                         A primeira mensagem deve SEMPRE ser um template. Ele será enviado automaticamente ao criar a conversa.
                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        A primeira mensagem deve SEMPRE ser um template. Ele será enviado automaticamente ao criar a conversa.
+                      </p>
                     </div>
+
+                    {detectedVariables.length > 0 && (
+                      <div className="space-y-3 border rounded-md p-3 bg-muted/20">
+                        <Label className="text-sm font-semibold">Variáveis do Template</Label>
+                        {detectedVariables.map((variable) => (
+                          <div key={variable} className="space-y-1">
+                            <Label htmlFor={`var-${variable}`} className="text-xs">
+                              Valor para {'{{'}{variable}{'}}'}
+                            </Label>
+                            <Input
+                              id={`var-${variable}`}
+                              placeholder={`Digite o valor para ${variable}`}
+                              value={templateVariableValues[variable] || ''}
+                              onChange={(e) => setTemplateVariableValues({
+                                ...templateVariableValues,
+                                [variable]: e.target.value
+                              })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={closeNewConversationModal}>
