@@ -521,6 +521,7 @@ export class TemplatesService {
       console.log('📤 [Templates] Variables recebidas:', JSON.stringify(variables));
       console.log('📤 [Templates] Body vars ordenadas:', JSON.stringify(bodyVars));
 
+      /*
       if (bodyVars.length > 0) {
         components.push({
           type: 'body',
@@ -530,6 +531,7 @@ export class TemplatesService {
           })),
         });
       }
+      */
 
       console.log('📤 [Templates] Components a enviar:', JSON.stringify(components, null, 2));
 
