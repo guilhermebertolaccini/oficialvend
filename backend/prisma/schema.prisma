@@ -268,7 +268,8 @@ model Template {
   language      String   @default("pt_BR")
   category      String   @default("MARKETING")
   segmentId     Int? // null = global (todos os segmentos)
-  lineId        Int? // Mantido para compatibilidade (pode ser removido futuramente)
+  lineId        Int? // Template vinculado a uma linha específica
+  line          LinesStock?   @relation(fields: [lineId], references: [id])
   namespace     String?
   status        String   @default("APPROVED")
   headerType    String?

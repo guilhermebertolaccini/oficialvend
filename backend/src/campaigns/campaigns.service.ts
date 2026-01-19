@@ -68,14 +68,34 @@ export class CampaignsService {
       throw new BadRequestException('Nenhum operador online disponível para este segmento');
     }
 
+    // Usar parâmetros do upload ou da campanha
+    const finalUseTemplate = useTemplate !== undefined ? useTemplate : (campaign.useTemplate || false);
+    const finalTemplateId = templateId !== undefined ? templateId : campaign.templateId;
+
     // Buscar linhas disponíveis (através dos operadores)
-    const availableLines = onlineOperators
+    let availableLines = onlineOperators
       .filter(op => op.line !== null)
       .map(op => op.line!)
       .filter((lineId, index, self) => self.indexOf(lineId) === index); // Remover duplicatas
 
     if (availableLines.length === 0) {
       throw new BadRequestException('Nenhuma linha disponível para este segmento');
+    }
+
+    // Se estiver usando template, verificar se o template é vinculado a uma linha específica
+    if (finalUseTemplate && finalTemplateId) {
+      const template = await this.prisma.template.findUnique({
+        where: { id: finalTemplateId },
+      });
+
+      if (template && template.lineId) {
+        // Verificar se a linha vinculada está disponível (tem operador online)
+        if (!availableLines.includes(template.lineId)) {
+          throw new BadRequestException(`O template "${template.name}" é vinculado a uma linha que não está disponível (sem operador online).`);
+        }
+        // Restringir envio apenas para a linha vinculada
+        availableLines = [template.lineId];
+      }
     }
 
     // Dividir contatos igualmente entre linhas
@@ -114,10 +134,6 @@ export class CampaignsService {
       : 0; // Se só tem 1 rodada, enviar imediatamente
 
     const intervalMs = intervalBetweenRounds * 60 * 1000;
-
-    // Usar parâmetros do upload ou da campanha
-    const finalUseTemplate = useTemplate !== undefined ? useTemplate : (campaign.useTemplate || false);
-    const finalTemplateId = templateId !== undefined ? templateId : campaign.templateId;
 
     // Criar contatos e agendar envios
     // Distribuir em rodadas: cada rodada envia uma mensagem por linha simultaneamente

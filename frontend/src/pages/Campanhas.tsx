@@ -30,7 +30,9 @@ import {
   Campaign as APICampaign,
   CampaignStats,
   Segment,
-  Template as APITemplate
+  Template as APITemplate,
+  Line,
+  linesService
 } from "@/services/api";
 import { format } from "date-fns";
 
@@ -61,6 +63,7 @@ const speedLabels = {
 export default function Campanhas() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
+  const [lines, setLines] = useState<Line[]>([]);
   const [templates, setTemplates] = useState<APITemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,12 +72,14 @@ export default function Campanhas() {
     segment: string;
     speed: 'fast' | 'medium' | 'slow';
     templateId: string;
+    lineId: string;
     endTime: string;
   }>({
     name: '',
     segment: '',
     speed: 'medium',
     templateId: '',
+    lineId: '',
     endTime: '19:00'
   });
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -132,19 +137,38 @@ export default function Campanhas() {
     }
   }, []);
 
-  const loadTemplates = useCallback(async () => {
+  const loadLines = useCallback(async () => {
     try {
-      const data = await templatesService.list({ status: 'APPROVED' });
-      setTemplates(data);
+      const data = await linesService.list();
+      setLines(data);
     } catch (error) {
-      console.error('Error loading templates:', error);
+      console.error('Error loading lines:', error);
     }
   }, []);
 
+  const loadTemplates = useCallback(async () => {
+    try {
+      // Se tiver linha selecionada, busca templates da linha
+      if (formData.lineId && formData.lineId !== 'all') {
+        const data = await templatesService.getByLine(parseInt(formData.lineId));
+        setTemplates(data.filter((t: any) => t.status === 'APPROVED'));
+      } else {
+        const data = await templatesService.list({ status: 'APPROVED' });
+        setTemplates(data);
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  }, [formData.lineId]);
+
   useEffect(() => {
     loadSegments();
+    loadLines();
+  }, [loadSegments, loadLines]);
+
+  useEffect(() => {
     loadTemplates();
-  }, [loadSegments, loadTemplates]);
+  }, [loadTemplates]);
 
   useEffect(() => {
     if (segments.length > 0) {
@@ -242,6 +266,7 @@ export default function Campanhas() {
         segment: '',
         speed: 'medium',
         templateId: '',
+        lineId: '',
         endTime: '19:00'
       });
       setCsvFile(null);
@@ -375,6 +400,31 @@ export default function Campanhas() {
                   As mensagens serão distribuídas uniformemente até este horário
                 </p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="line">Filtrar Templates por Linha (Opcional)</Label>
+              <Select
+                value={formData.lineId}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, lineId: value, templateId: '' }); // Reset template when line changes
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as linhas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as linhas</SelectItem>
+                  {lines.map((line) => (
+                    <SelectItem key={line.id} value={line.id.toString()}>
+                      {line.phone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selecione uma linha para ver apenas os templates vinculados a ela.
+              </p>
             </div>
 
             <div className="space-y-2">

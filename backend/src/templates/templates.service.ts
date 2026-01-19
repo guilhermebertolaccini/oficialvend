@@ -85,6 +85,15 @@ export class TemplatesService {
 
     const templates = await this.prisma.template.findMany({
       where,
+      include: {
+        line: {
+          select: {
+            id: true,
+            phone: true,
+            numberId: true
+          }
+        }
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -127,12 +136,13 @@ export class TemplatesService {
       throw new NotFoundException('Linha não encontrada');
     }
 
-    // Retornar templates do segmento da linha + templates globais
+    // Retornar templates da linha específica + templates do segmento (sem linha específica) + globais
     const templates = await this.prisma.template.findMany({
       where: {
         OR: [
-          { segmentId: line.segment },
-          { segmentId: null },  // Templates globais
+          { lineId: lineId }, // Templates exclusivos da linha
+          { segmentId: line.segment, lineId: null }, // Templates do segmento (sem vínculo de linha)
+          { segmentId: null, lineId: null },  // Templates globais (sem vínculo de linha ou segmento)
         ],
         status: 'APPROVED',
       },

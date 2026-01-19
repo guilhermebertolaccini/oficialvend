@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsArray, IsInt } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class TemplateButtonDto {
@@ -39,13 +39,9 @@ export class CreateTemplateDto {
   })
   @IsNumber()
   @IsOptional()
+  @IsInt()
   segmentId?: number;  // null = global (todos os segmentos)
 
-  @Transform(({ value }) => {
-    if (value === null || value === undefined || value === '') return undefined;
-    const num = Number(value);
-    return isNaN(num) ? undefined : num;
-  })
   @IsNumber()
   @IsOptional()
   lineId?: number;  // Mantido para compatibilidade
