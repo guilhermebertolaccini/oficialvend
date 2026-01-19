@@ -175,6 +175,7 @@ model LinesStock {
 
   operators LineOperator[] // Relacionamento com operadores
   creator   User?          @relation(fields: [createdBy], references: [id]) // Usuário que criou
+  templates Template[]     // Templates vinculados a esta linha
 
   @@index([phone])
   @@index([lineStatus])
