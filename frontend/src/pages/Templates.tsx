@@ -238,7 +238,6 @@ export default function Templates() {
     setEditingTemplate(null);
     setFormData({
       name: '',
-      name: '',
       segmentId: '',
       lineId: '',
       language: 'pt_BR',
@@ -716,214 +715,214 @@ export default function Templates() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="headerType">Tipo de Cabeçalho</Label>
-            <Select value={formData.headerType} onValueChange={(value) => setFormData({ ...formData, headerType: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TEXT">Texto</SelectItem>
-                <SelectItem value="IMAGE">Imagem</SelectItem>
-                <SelectItem value="VIDEO">Vídeo</SelectItem>
-                <SelectItem value="DOCUMENT">Documento</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {formData.headerType === 'TEXT' && (
             <div className="space-y-2">
-              <Label htmlFor="header">Cabeçalho</Label>
+              <Label htmlFor="headerType">Tipo de Cabeçalho</Label>
+              <Select value={formData.headerType} onValueChange={(value) => setFormData({ ...formData, headerType: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TEXT">Texto</SelectItem>
+                  <SelectItem value="IMAGE">Imagem</SelectItem>
+                  <SelectItem value="VIDEO">Vídeo</SelectItem>
+                  <SelectItem value="DOCUMENT">Documento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.headerType === 'TEXT' && (
+              <div className="space-y-2">
+                <Label htmlFor="header">Cabeçalho</Label>
+                <Textarea
+                  id="header"
+                  value={formData.header}
+                  onChange={(e) => setFormData({ ...formData, header: e.target.value })}
+                  placeholder="Texto do cabeçalho (opcional)"
+                  rows={2}
+                />
+              </div>
+            )}
+
+            {formData.headerType !== 'TEXT' && formData.headerType && (
+              <div className="space-y-2">
+                <Label htmlFor="header">URL do Cabeçalho ({formData.headerType})</Label>
+                <Input
+                  id="header"
+                  value={formData.header}
+                  onChange={(e) => setFormData({ ...formData, header: e.target.value })}
+                  placeholder={`URL da ${formData.headerType.toLowerCase()}`}
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="bodyText">Corpo do Template *</Label>
               <Textarea
-                id="header"
-                value={formData.header}
-                onChange={(e) => setFormData({ ...formData, header: e.target.value })}
-                placeholder="Texto do cabeçalho (opcional)"
+                id="bodyText"
+                value={formData.bodyText}
+                onChange={(e) => setFormData({ ...formData, bodyText: e.target.value })}
+                placeholder={`Texto principal do template. Use {{1}}, {{2}}, etc. para variáveis.`}
+                rows={6}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Use {'{{1}}'}, {'{{2}}'}, etc. para variáveis que serão substituídas ao enviar. Ex: "Olá {'{{1}}'}, tudo bem?"
+              </p>
+            </div>
+
+            <div className="space-y-4 border rounded-md p-4 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label>Botões (opcional, máx 3)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (formData.buttons.length < 3) {
+                      setFormData({
+                        ...formData,
+                        buttons: [...formData.buttons, { type: 'QUICK_REPLY', text: '' }]
+                      });
+                    }
+                  }}
+                  disabled={formData.buttons.length >= 3}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Botão
+                </Button>
+              </div>
+
+              {formData.buttons.map((button, index) => (
+                <div key={index} className="grid gap-2 p-3 border rounded-md bg-background relative">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 text-destructive"
+                    onClick={() => {
+                      const newButtons = [...formData.buttons];
+                      newButtons.splice(index, 1);
+                      setFormData({ ...formData, buttons: newButtons });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tipo</Label>
+                      <Select
+                        value={button.type}
+                        onValueChange={(value) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index] = { ...button, type: value, text: button.text };
+                          // Reset fields based on type
+                          if (value === 'URL') newButtons[index].url = '';
+                          if (value === 'PHONE_NUMBER') newButtons[index].phoneNumber = '';
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QUICK_REPLY">Resposta Rápida</SelectItem>
+                          <SelectItem value="URL">Link (URL)</SelectItem>
+                          <SelectItem value="PHONE_NUMBER">Telefone</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Texto do Botão</Label>
+                      <Input
+                        value={button.text}
+                        onChange={(e) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index].text = e.target.value;
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                        className="h-8"
+                        placeholder="Ex: Sim, aceito"
+                      />
+                    </div>
+                  </div>
+
+                  {button.type === 'URL' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">URL</Label>
+                      <Input
+                        value={button.url || ''}
+                        onChange={(e) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index].url = e.target.value;
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                        className="h-8"
+                        placeholder="https://exemplo.com"
+                      />
+                    </div>
+                  )}
+
+                  {button.type === 'PHONE_NUMBER' && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Telefone</Label>
+                      <Input
+                        value={button.phoneNumber || ''}
+                        onChange={(e) => {
+                          const newButtons = [...formData.buttons];
+                          newButtons[index].phoneNumber = e.target.value;
+                          setFormData({ ...formData, buttons: newButtons });
+                        }}
+                        className="h-8"
+                        placeholder="+5511999999999"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {formData.buttons.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  Nenhum botão adicionado
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="footer">Rodapé</Label>
+              <Textarea
+                id="footer"
+                value={formData.footer}
+                onChange={(e) => setFormData({ ...formData, footer: e.target.value })}
+                placeholder="Texto do rodapé (opcional)"
                 rows={2}
               />
             </div>
-          )}
 
-          {formData.headerType !== 'TEXT' && formData.headerType && (
             <div className="space-y-2">
-              <Label htmlFor="header">URL do Cabeçalho ({formData.headerType})</Label>
+              <Label htmlFor="namespace">Namespace</Label>
               <Input
-                id="header"
-                value={formData.header}
-                onChange={(e) => setFormData({ ...formData, header: e.target.value })}
-                placeholder={`URL da ${formData.headerType.toLowerCase()}`}
+                id="namespace"
+                value={formData.namespace}
+                onChange={(e) => setFormData({ ...formData, namespace: e.target.value })}
+                placeholder="Namespace do template (opcional)"
               />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="bodyText">Corpo do Template *</Label>
-            <Textarea
-              id="bodyText"
-              value={formData.bodyText}
-              onChange={(e) => setFormData({ ...formData, bodyText: e.target.value })}
-              placeholder={`Texto principal do template. Use {{1}}, {{2}}, etc. para variáveis.`}
-              rows={6}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Use {'{{1}}'}, {'{{2}}'}, etc. para variáveis que serão substituídas ao enviar. Ex: "Olá {'{{1}}'}, tudo bem?"
-            </p>
-          </div>
-
-          <div className="space-y-4 border rounded-md p-4 bg-muted/20">
-            <div className="flex items-center justify-between">
-              <Label>Botões (opcional, máx 3)</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (formData.buttons.length < 3) {
-                    setFormData({
-                      ...formData,
-                      buttons: [...formData.buttons, { type: 'QUICK_REPLY', text: '' }]
-                    });
-                  }
-                }}
-                disabled={formData.buttons.length >= 3}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Botão
-              </Button>
-            </div>
-
-            {formData.buttons.map((button, index) => (
-              <div key={index} className="grid gap-2 p-3 border rounded-md bg-background relative">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1 right-1 h-6 w-6 text-destructive"
-                  onClick={() => {
-                    const newButtons = [...formData.buttons];
-                    newButtons.splice(index, 1);
-                    setFormData({ ...formData, buttons: newButtons });
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Tipo</Label>
-                    <Select
-                      value={button.type}
-                      onValueChange={(value) => {
-                        const newButtons = [...formData.buttons];
-                        newButtons[index] = { ...button, type: value, text: button.text };
-                        // Reset fields based on type
-                        if (value === 'URL') newButtons[index].url = '';
-                        if (value === 'PHONE_NUMBER') newButtons[index].phoneNumber = '';
-                        setFormData({ ...formData, buttons: newButtons });
-                      }}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="QUICK_REPLY">Resposta Rápida</SelectItem>
-                        <SelectItem value="URL">Link (URL)</SelectItem>
-                        <SelectItem value="PHONE_NUMBER">Telefone</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Texto do Botão</Label>
-                    <Input
-                      value={button.text}
-                      onChange={(e) => {
-                        const newButtons = [...formData.buttons];
-                        newButtons[index].text = e.target.value;
-                        setFormData({ ...formData, buttons: newButtons });
-                      }}
-                      className="h-8"
-                      placeholder="Ex: Sim, aceito"
-                    />
-                  </div>
-                </div>
-
-                {button.type === 'URL' && (
-                  <div className="space-y-1">
-                    <Label className="text-xs">URL</Label>
-                    <Input
-                      value={button.url || ''}
-                      onChange={(e) => {
-                        const newButtons = [...formData.buttons];
-                        newButtons[index].url = e.target.value;
-                        setFormData({ ...formData, buttons: newButtons });
-                      }}
-                      className="h-8"
-                      placeholder="https://exemplo.com"
-                    />
-                  </div>
-                )}
-
-                {button.type === 'PHONE_NUMBER' && (
-                  <div className="space-y-1">
-                    <Label className="text-xs">Telefone</Label>
-                    <Input
-                      value={button.phoneNumber || ''}
-                      onChange={(e) => {
-                        const newButtons = [...formData.buttons];
-                        newButtons[index].phoneNumber = e.target.value;
-                        setFormData({ ...formData, buttons: newButtons });
-                      }}
-                      className="h-8"
-                      placeholder="+5511999999999"
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-            {formData.buttons.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                Nenhum botão adicionado
+              <p className="text-xs text-muted-foreground">
+                Namespace retornado pela Meta após sincronização
               </p>
-            )}
+            </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="footer">Rodapé</Label>
-            <Textarea
-              id="footer"
-              value={formData.footer}
-              onChange={(e) => setFormData({ ...formData, footer: e.target.value })}
-              placeholder="Texto do rodapé (opcional)"
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="namespace">Namespace</Label>
-            <Input
-              id="namespace"
-              value={formData.namespace}
-              onChange={(e) => setFormData({ ...formData, namespace: e.target.value })}
-              placeholder="Namespace do template (opcional)"
-            />
-            <p className="text-xs text-muted-foreground">
-              Namespace retornado pela Meta após sincronização
-            </p>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSaving}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </MainLayout >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSaving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
   );
 }

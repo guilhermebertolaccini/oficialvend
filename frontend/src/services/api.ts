@@ -940,6 +940,7 @@ export interface Template {
   category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
   segmentId: number | null;  // Vinculado a segmento (null = global)
   lineId?: number;  // Mantido para compatibilidade
+  line?: Line;      // Objeto da linha (se incluído)
   namespace?: string;
   status: 'APPROVED' | 'PENDING' | 'REJECTED';
   headerType?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
