@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Headers, HttpCode, HttpStatus, BadRequestException, Req, RawBodyRequest, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Headers, HttpCode, HttpStatus, BadRequestException, Req, RawBodyRequest, Res, UsePipes } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { CloudApiWebhookService } from './cloud-api-webhook.service';
 import { WhatsappCloudService } from '../whatsapp-cloud/whatsapp-cloud.service';
@@ -18,6 +18,7 @@ export class CloudApiWebhookController {
    * IMPORTANTE: A Meta espera que retornemos APENAS o challenge como texto puro, não JSON
    */
   @Get('cloud-api')
+  @UsePipes()
   verifyWebhook(
     @Res() res: Response,
     @Query('hub.mode') mode?: string,
@@ -58,12 +59,17 @@ export class CloudApiWebhookController {
    */
   @Post('cloud-api')
   @HttpCode(HttpStatus.OK)
+  @UsePipes()
   async handleWebhook(
     @Req() req: RawBodyRequest<Request>,
     @Body() body: any,
     @Headers('x-hub-signature-256') signature: string,
   ) {
     try {
+      console.log(`📥 [Webhook] POST received from ${req.ip}, content-type: ${req.headers['content-type']}`);
+      console.log(`📥 [Webhook] Body keys: ${body ? Object.keys(body).join(', ') : 'EMPTY'}`);
+      console.log(`📥 [Webhook] Signature present: ${!!signature}`);
+
       // Validar assinatura se appSecret estiver configurado
       const appSecret = process.env.WHATSAPP_APP_SECRET;
       if (appSecret && signature) {
@@ -86,7 +92,9 @@ export class CloudApiWebhookController {
       const result = await this.webhookService.handleWebhook(body);
       return result;
     } catch (error) {
-      throw new BadRequestException(`Erro ao processar webhook: ${error.message}`);
+      // ALWAYS return 200 to Meta — non-2xx causes Meta to stop sending webhooks
+      console.error(`❌ [Webhook] Error processing webhook: ${error.message}`, error.stack);
+      return { status: 'error', message: 'Internal processing error' };
     }
   }
 }
