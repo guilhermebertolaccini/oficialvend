@@ -751,6 +751,8 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     if (conversation.segment) {
       this.emitToSupervisors(conversation.segment, 'new_message', { message: conversation });
     }
+
+    return { success: true, conversation };
   }
 
   /**
@@ -760,14 +762,14 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     return this.operatorConnectionTime.get(userId) || null;
   }
 
-  emitToUser(userId: number, event: string, data: any) {
+  // Método público para enviar notificação para um usuário específico
+  public emitToUser(userId: number, event: string, data: any) {
     const socketId = this.connectedUsers.get(userId);
     if (socketId) {
-      const client = this.server.sockets.sockets.get(socketId);
-      if (client) {
-        client.emit(event, data);
-      }
+      this.server.to(socketId).emit(event, data);
+      return true;
     }
+    return false;
   }
 
   private async emitToSupervisors(segment: number, event: string, data: any) {
@@ -814,3 +816,4 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
   }
 }
+```
