@@ -137,6 +137,19 @@ export class CloudApiWebhookService {
             continue;
           }
 
+          // Buscar App para obter o token (já que o relacionamento não está no include padrão)
+          const app = await this.prisma.app.findUnique({
+            where: { id: line.appId },
+          });
+
+          if (!app) {
+            this.logger.warn(`App não encontrado para a linha ${line.phone} (App ID: ${line.appId})`);
+            continue;
+          }
+
+          // Anexar app à linha para uso posterior
+          (line as any).app = app;
+
           // Processar mensagens recebidas
           if (value.messages && Array.isArray(value.messages)) {
             for (const message of value.messages) {
@@ -201,7 +214,7 @@ export class CloudApiWebhookService {
         try {
           const mediaBuffer = await this.whatsappCloudService.downloadMedia(
             message.image.id,
-            line.token!,
+            line.app.accessToken,
           );
           const fileName = `${Date.now()}-${from}-image.jpg`;
           const filePath = path.join(this.uploadsDir, fileName);
@@ -216,7 +229,7 @@ export class CloudApiWebhookService {
         try {
           const mediaBuffer = await this.whatsappCloudService.downloadMedia(
             message.video.id,
-            line.token!,
+            line.app.accessToken,
           );
           const fileName = `${Date.now()}-${from}-video.mp4`;
           const filePath = path.join(this.uploadsDir, fileName);
@@ -231,7 +244,7 @@ export class CloudApiWebhookService {
         try {
           const mediaBuffer = await this.whatsappCloudService.downloadMedia(
             message.audio.id,
-            line.token!,
+            line.app.accessToken,
           );
           const fileName = `${Date.now()}-${from}-audio.ogg`;
           const filePath = path.join(this.uploadsDir, fileName);
@@ -246,7 +259,7 @@ export class CloudApiWebhookService {
         try {
           const mediaBuffer = await this.whatsappCloudService.downloadMedia(
             message.document.id,
-            line.token!,
+            line.app.accessToken,
           );
           const extension = message.document.filename?.split('.').pop() || 'pdf';
           const fileName = `${Date.now()}-${from}-document.${extension}`;
