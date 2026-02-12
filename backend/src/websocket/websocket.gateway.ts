@@ -576,14 +576,24 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       return { success: true, conversation };
     } catch (error: any) {
+      const errorResponse = error.getResponse ? error.getResponse() : error.response?.data || error;
+      const errorCode = errorResponse?.error?.code || errorResponse?.code || error.code;
+
       console.error('❌ [WebSocket] Erro ao enviar mensagem:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: JSON.stringify(error.response?.data, null, 2),
+        response: errorResponse,
         message: error.message,
-        code: error.code,
-        stack: error.stack,
+        code: errorCode,
       });
+
+      // Verificar erro de janela de 24h (131047)
+      if (errorCode === 131047) {
+        this.emitToUser(user.id, 'message-error', {
+          type: '24h_window_expired',
+          contactPhone: data.contactPhone,
+          message: 'A janela de 24h para enviar mensagens livres expirou. Use um template para reativar a conversa.',
+        });
+        return { error: 'Janela de 24h expirada.' };
+      }
 
       // Registrar evento de erro
       await this.systemEventsService.logEvent(
@@ -595,9 +605,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
           userId: user.id,
           userName: user.name,
           contactPhone: data.contactPhone,
-          errorCode: error.code,
+          errorCode: errorCode,
           errorMessage: error.message,
-          status: error.response?.status,
+          errorDetails: errorResponse,
         },
         user.id,
         EventSeverity.ERROR,

@@ -338,6 +338,7 @@ export class CloudApiWebhookService {
         sender: 'contact',
         messageType,
         mediaUrl,
+        datetime: new Date(timestamp), // Usar timestamp do webhook
         // messageId removido temporariamente até a coluna existir no banco
       });
 

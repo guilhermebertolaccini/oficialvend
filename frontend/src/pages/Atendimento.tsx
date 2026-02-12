@@ -632,7 +632,8 @@ export default function Atendimento() {
     loadConversations();
     loadTabulations();
     loadTemplates();
-  }, [loadConversations, loadTabulations, loadTemplates]);
+    loadAvailableLines();
+  }, [loadConversations, loadTabulations, loadTemplates, loadAvailableLines]);
 
   // Carregar linhas disponíveis quando o modal abrir
   useEffect(() => {
@@ -1295,7 +1296,7 @@ export default function Atendimento() {
 
   const formatTime = (datetime: string) => {
     try {
-      return format(new Date(datetime), 'HH:mm');
+      return format(new Date(datetime), 'dd/MM HH:mm');
     } catch {
       return '';
     }
@@ -1685,13 +1686,20 @@ export default function Atendimento() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm text-foreground truncate">
-                            {conv.contactName}
-                          </p>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(conv.lastMessageTime)}
-                          </span>
+                        <div className="flex flex-col">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm text-foreground truncate">
+                              {conv.contactName}
+                            </p>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTime(conv.lastMessageTime)}
+                            </span>
+                          </div>
+                          {conv.userLine && (
+                            <span className="text-[10px] text-primary/80 font-medium">
+                              {availableLines.find(l => l.id === conv.userLine)?.name || availableLines.find(l => l.id === conv.userLine)?.phone || `Linha ${conv.userLine}`}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 mt-0.5">
                           {conv.isFromContact ? (

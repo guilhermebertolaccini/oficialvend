@@ -16,7 +16,7 @@ export class ConversationsService {
     const conversation = await this.prisma.conversation.create({
       data: {
         ...createConversationDto,
-        datetime: new Date(),
+        datetime: createConversationDto.datetime || new Date(),
       },
       select: {
         id: true,

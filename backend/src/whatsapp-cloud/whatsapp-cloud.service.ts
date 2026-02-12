@@ -112,9 +112,10 @@ export class WhatsappCloudService {
       return response.data;
     } catch (error: any) {
       this.logger.error(`Erro ao enviar mensagem de texto: ${error.response?.data || error.message}`);
-      throw new BadRequestException(
-        `Erro ao enviar mensagem: ${error.response?.data?.error?.message || error.message}`
-      );
+      throw new BadRequestException({
+        message: `Erro ao enviar mensagem: ${error.response?.data?.error?.message || error.message}`,
+        error: error.response?.data?.error
+      });
     }
   }
 

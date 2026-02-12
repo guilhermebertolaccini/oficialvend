@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from 'class-validator';
 import { Sender } from '@prisma/client';
 
 export class CreateConversationDto {
@@ -49,4 +49,8 @@ export class CreateConversationDto {
   @IsString()
   @IsOptional()
   messageId?: string; // WhatsApp Message ID (wamid) - usado para evitar duplicatas
+
+  @IsOptional()
+  @IsDateString()
+  datetime?: Date;
 }
