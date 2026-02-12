@@ -1676,7 +1676,9 @@ export default function Atendimento() {
                     className={cn(
                       "w-full p-3 rounded-xl text-left transition-colors",
                       "hover:bg-primary/5",
-                      selectedConversation?.contactPhone === conv.contactPhone && "bg-primary/10"
+                      selectedConversation?.contactPhone === conv.contactPhone &&
+                      selectedConversation?.userLine === conv.userLine &&
+                      "bg-primary/10"
                     )}
                   >
                     <div className="flex items-start gap-3">
@@ -2399,6 +2401,6 @@ export default function Atendimento() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </MainLayout>
+    </MainLayout >
   );
 }

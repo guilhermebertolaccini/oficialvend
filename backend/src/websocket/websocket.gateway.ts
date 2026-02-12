@@ -525,6 +525,7 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
         sender: 'operator',
         messageType: data.messageType || 'text',
         mediaUrl: data.mediaUrl,
+        messageId: apiResponse?.messages?.[0]?.id, // Salvar wamid para referência futura
       });
 
       // Log apenas para mensagens enviadas com sucesso (fluxo principal)

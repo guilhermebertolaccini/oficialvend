@@ -420,7 +420,19 @@ export class CloudApiWebhookService {
         const is24hError = status.errors.some((e: any) => e.code === 131047);
 
         if (is24hError && status.recipient_id) {
-          // Buscar conversa para obter o operador
+          // Tentar deletar a mensagem que falhou usando o wamid
+          if (messageId) {
+            try {
+              await this.prisma.conversation.deleteMany({
+                where: { messageId: messageId }
+              });
+              this.logger.log(`🗑️ Mensagem ${messageId} deletada devida a erro de janela de 24h`);
+            } catch (delError) {
+              this.logger.warn(`Erro ao deletar mensagem falha: ${delError.message}`);
+            }
+          }
+
+          // Buscar conversa para obter o operador (para notificação)
           const conversation = await this.prisma.conversation.findFirst({
             where: {
               contactPhone: status.recipient_id,
