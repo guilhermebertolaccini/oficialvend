@@ -453,6 +453,21 @@ export class CloudApiWebhookService {
             this.logger.log(`📨 Notificando operador ${conversation.userId} sobre erro de 24h para ${status.recipient_id}`);
           }
         }
+      } else {
+        // Emitir atualização de status para sucesso (sent, delivered, read)
+        // Isso permite que o frontend saiba que a mensagem foi processada
+        const conversation = await this.prisma.conversation.findFirst({
+          where: { messageId: messageId },
+          select: { userId: true, contactPhone: true }
+        });
+
+        if (conversation?.userId) {
+          this.websocketGateway.emitToUser(conversation.userId, 'message-status', {
+            messageId,
+            status: statusValue,
+            contactPhone: conversation.contactPhone,
+          });
+        }
       }
 
       return { status: 'success' };

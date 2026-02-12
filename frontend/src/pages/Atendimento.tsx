@@ -103,6 +103,26 @@ export default function Atendimento() {
   const previousConversationsRef = useRef<ConversationGroup[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isWaitingForDelivery, setIsWaitingForDelivery] = useState(false);
+  const pendingMessageIdRef = useRef<string | null>(null);
+
+  // Subscribe to message status updates (sent, delivered, read) to clear input
+  useRealtimeSubscription('message-status', (data: any) => {
+    // Se a mensagem enviada foi confirmada como enviada (sent) ou entregue/lida
+    if (data?.messageId && (data.status === 'sent' || data.status === 'delivered' || data.status === 'read')) {
+      // Verificar se é a mensagem que estamos aguardando
+      if (pendingMessageIdRef.current === data.messageId) {
+        console.log('[Atendimento] Mensagem confirmada pelo webhook, limpando input');
+        setMessageText("");
+        setIsWaitingForDelivery(false);
+        pendingMessageIdRef.current = null;
+        playSuccessSound();
+
+        // Recarregar conversas para atualizar status visual
+        loadConversations();
+      }
+    }
+  });
 
   // Estado para filtro de conversas
   type FilterType = 'todas' | 'stand-by' | 'atendimento' | 'finalizadas';
@@ -280,6 +300,10 @@ export default function Atendimento() {
   useRealtimeSubscription('message-error', (data: any) => {
     console.log('[Atendimento] Message error received:', data);
     playErrorSound();
+
+    // Se houver erro, liberar o input se estiver travado
+    setIsWaitingForDelivery(false);
+    pendingMessageIdRef.current = null;
 
     // Novo formato: data.type e data.message (para erros como 24h)
     if (data?.type === '24h_window_expired') {
@@ -853,20 +877,36 @@ export default function Atendimento() {
       setIsSending(false);
 
       if (response?.success) {
-        setMessageText(""); // Limpar campo apenas se sucesso
-        playSuccessSound();
+        // SUCESSO NO ENVIO PARA META (mas ainda não confirmado pelo webhook)
+        // Não limpamos o input ainda, aguardamos o webhook
+        // Salvamos o ID da mensagem para comparar depois
+        console.log('[Atendimento] Mensagem enviada para API, aguardando webhook. ID:', response.conversation?.messageId);
 
-        // Recarregar conversas após um pequeno delay
-        setTimeout(() => {
+        if (response.conversation?.messageId) {
+          pendingMessageIdRef.current = response.conversation.messageId;
+          setIsWaitingForDelivery(true);
+
+          // Fallback: Se não receber confirmação em 10 segundos, liberar
+          setTimeout(() => {
+            if (pendingMessageIdRef.current === response.conversation.messageId) {
+              console.log('[Atendimento] Timeout aguardando webhook, liberando input');
+              setIsWaitingForDelivery(false);
+              pendingMessageIdRef.current = null;
+              // Não limpamos o texto, pois pode ter falhado silenciosamente
+            }
+          }, 10000);
+        } else {
+          // Se não veio ID (caso raro), limpamos logo
+          setMessageText("");
+          playSuccessSound();
           loadConversations();
-        }, 500);
+        }
+
       } else {
-        // Erro retornado pelo backend
+        // Erro retornado pelo backend (ex: erro síncrono da API)
         playErrorSound();
         const errorMessage = response?.error || "Erro ao enviar mensagem";
 
-        // Se for erro de 24h, o backend já emite o evento 'message-error' que mostra toast
-        // Mas mostramos aqui também para garantir feedback
         toast({
           title: "Erro ao enviar mensagem",
           description: errorMessage,
@@ -875,7 +915,7 @@ export default function Atendimento() {
       }
     });
 
-  }, [messageText, selectedConversation, isSending, canSendFreeMessage, playSuccessSound, playErrorSound, loadConversations, toast]);
+  }, [messageText, selectedConversation, isSending, isWaitingForDelivery, canSendFreeMessage, playSuccessSound, playErrorSound, loadConversations, toast]);
 
   const handleSendTemplate = useCallback(async () => {
     if (!selectedTemplateId || !selectedConversation || isSending) {
