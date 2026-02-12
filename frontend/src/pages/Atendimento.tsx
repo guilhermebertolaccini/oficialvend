@@ -843,33 +843,39 @@ export default function Atendimento() {
 
     setIsSending(true);
 
-    try {
-      // Enviar mensagem livre via WebSocket
-      realtimeSocket.emit('send-message', {
-        contactPhone: selectedConversation.contactPhone,
-        message: messageText.trim(),
-        messageType: 'text',
-        isNewConversation: false, // Já existe conversa
-      });
-
-      setMessageText(""); // Limpar campo
-      playSuccessSound();
-
-      // Recarregar conversas após um pequeno delay para garantir que a mensagem foi processada
-      setTimeout(() => {
-        loadConversations();
-      }, 500);
-    } catch (error) {
-      playErrorSound();
-      toast({
-        title: "Erro ao enviar mensagem",
-        description: error instanceof Error ? error.message : "Erro ao enviar mensagem",
-        variant: "destructive",
-      });
-    } finally {
+    // Enviar mensagem livre via WebSocket com acknowledgement
+    realtimeSocket.emit('send-message', {
+      contactPhone: selectedConversation.contactPhone,
+      message: messageText.trim(),
+      messageType: 'text',
+      isNewConversation: false, // Já existe conversa
+    }, (response: any) => {
       setIsSending(false);
-    }
-  }, [messageText, selectedConversation, isSending, canSendFreeMessage, playSuccessSound, playErrorSound, loadConversations]);
+
+      if (response?.success) {
+        setMessageText(""); // Limpar campo apenas se sucesso
+        playSuccessSound();
+
+        // Recarregar conversas após um pequeno delay
+        setTimeout(() => {
+          loadConversations();
+        }, 500);
+      } else {
+        // Erro retornado pelo backend
+        playErrorSound();
+        const errorMessage = response?.error || "Erro ao enviar mensagem";
+
+        // Se for erro de 24h, o backend já emite o evento 'message-error' que mostra toast
+        // Mas mostramos aqui também para garantir feedback
+        toast({
+          title: "Erro ao enviar mensagem",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    });
+
+  }, [messageText, selectedConversation, isSending, canSendFreeMessage, playSuccessSound, playErrorSound, loadConversations, toast]);
 
   const handleSendTemplate = useCallback(async () => {
     if (!selectedTemplateId || !selectedConversation || isSending) {

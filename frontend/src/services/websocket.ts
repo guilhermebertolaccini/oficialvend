@@ -198,17 +198,24 @@ class RealtimeWebSocket {
     return () => this.disconnectionHandlers.delete(handler);
   }
 
-  send(event: string, data?: any) {
+  send(event: string, data?: any, callback?: (response: any) => void) {
     if (this.socket?.connected) {
-      this.socket.emit(event, data);
+      if (callback) {
+        this.socket.emit(event, data, callback);
+      } else {
+        this.socket.emit(event, data);
+      }
     } else {
       console.warn('[Socket.IO] Cannot send, not connected');
+      if (callback) {
+        callback({ error: 'Not connected' });
+      }
     }
   }
 
   // Método legado para compatibilidade
-  emit(event: string, data?: any) {
-    this.send(event, data);
+  emit(event: string, data?: any, callback?: (response: any) => void) {
+    this.send(event, data, callback);
   }
 
   get isConnected(): boolean {
