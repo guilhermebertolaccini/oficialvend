@@ -531,8 +531,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       // Log apenas para mensagens enviadas com sucesso (fluxo principal)
       console.log(`✅ Mensagem enviada: ${user.name} → ${data.contactPhone}`);
 
-      // Emitir mensagem para o usuário IMEDIATAMENTE (antes de registros assíncronos)
-      client.emit('message-sent', { message: conversation });
+      // REMOVIDO: Não emitir 'message-sent' imediatamente. 
+      // Aguardar confirmação do webhook (message-status) para evitar mensagens fantasmas em caso de erro (ex: 24h).
+      // client.emit('message-sent', { message: conversation });
 
       // Se houver supervisores online do mesmo segmento, enviar para eles também
       this.emitToSupervisors(user.segment, 'new_message', { message: conversation });

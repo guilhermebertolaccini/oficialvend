@@ -152,6 +152,20 @@ export default function Atendimento() {
 
     if (data.message) {
       const newMsg = data.message as APIConversation;
+
+      // IGNORAR MENSAGENS ENVIADAS PELO PRÓPRIO USUÁRIO (sender !== 'contact')
+      // Elas serão adicionadas apenas quando recebermos o status 'sent' ou 'delivered'
+      // Isso evita que mensagens que falharam (ex: 24h) apareçam no chat
+      if (newMsg.sender !== 'contact') {
+        const msgKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
+        console.log(`[Atendimento] Mensagem recebida de CONTATO: contactPhone=${newMsg.contactPhone}, userLine=${newMsg.userLine}`);
+
+        // ... (resto do código de processamento de mensagem recebida)
+      } else {
+        console.log('[Atendimento] Mensagem enviada por mim (via new_message), ignorando para aguardar confirmação do webhook.');
+        return;
+      }
+
       const msgKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
       console.log(`[Atendimento] Mensagem: contactPhone=${newMsg.contactPhone}, userLine=${newMsg.userLine}, msgKey=${msgKey}`);
 
