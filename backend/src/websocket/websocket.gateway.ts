@@ -77,9 +77,11 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   async handleConnection(client: Socket) {
     try {
+      console.log(`[WebSocket] Nova tentativa de conexão: ${client.id}`);
       const token = client.handshake.auth.token || client.handshake.headers.authorization?.split(' ')[1];
 
       if (!token) {
+        console.warn(`[WebSocket] Conexão rejeitada: Token não fornecido (socket: ${client.id})`);
         client.disconnect();
         return;
       }
@@ -90,6 +92,7 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       });
 
       if (!user) {
+        console.warn(`[WebSocket] Conexão rejeitada: Usuário não encontrado para token (sub: ${payload.sub})`);
         client.disconnect();
         return;
       }
@@ -97,6 +100,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       client.data.user = user;
       this.connectedUsers.set(user.id, client.id);
       this.operatorConnectionTime.set(user.id, Date.now()); // Rastrear tempo de conexão
+
+      console.log(`[WebSocket] Usuário ${user.name} (ID: ${user.id}) conectado e adicionado ao mapa. Socket: ${client.id}`);
+      console.log(`[WebSocket] Total de usuários conectados: ${this.connectedUsers.size}`);
 
       // Atualizar status do usuário para Online
       await (this.prisma as any).user.update({
