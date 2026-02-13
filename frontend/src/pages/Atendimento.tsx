@@ -156,7 +156,7 @@ export default function Atendimento() {
       // IGNORAR MENSAGENS ENVIADAS PELO PRÓPRIO USUÁRIO (sender !== 'contact')
       // Elas serão adicionadas apenas quando recebermos o status 'sent' ou 'delivered'
       // Isso evita que mensagens que falharam (ex: 24h) apareçam no chat
-      if (newMsg.sender !== 'contact') {
+      if (newMsg.sender === 'contact') {
         const msgKey = getConversationKey(newMsg.contactPhone, newMsg.userLine);
         console.log(`[Atendimento] Mensagem recebida de CONTATO: contactPhone=${newMsg.contactPhone}, userLine=${newMsg.userLine}`);
 
