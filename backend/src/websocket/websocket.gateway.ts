@@ -657,17 +657,12 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       const socketId = this.connectedUsers.get(userIdNum);
       console.log(`  → Procurando userId ${userIdNum} (tipo: ${typeof userIdNum}) em connectedUsers: socketId=${socketId || 'NÃO ENCONTRADO'}`);
 
+      // Se o usuário está em connectedUsers, ele está conectado via WebSocket
+      // Não devemos bloquear o envio baseado no status do banco (que pode estar desatualizado aka 'Offline')
       if (socketId) {
-        const user = await (this.prisma as any).user.findUnique({
-          where: { id: userIdNum },
-        });
-        if (user && user.status === 'Online') {
-          console.log(`  ✅ Enviando para ${user.name} (${user.role}) - operador específico (userId: ${conversation.userId})`);
-          this.server.to(socketId).emit('new_message', { message: conversation });
-          messageSent = true;
-        } else {
-          console.warn(`  ⚠️ Operador ${conversation.userId} não encontrado ou offline (status: ${user?.status || 'null'})`);
-        }
+        console.log(`  ✅ Enviando para ${userIdNum} (socket: ${socketId}) - operador específico (userId: ${conversation.userId})`);
+        this.server.to(socketId).emit('new_message', { message: conversation });
+        messageSent = true;
       } else {
         console.warn(`  ⚠️ Operador ${conversation.userId} não está conectado via WebSocket`);
       }
